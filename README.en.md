@@ -17,7 +17,7 @@ The source code is in this repository. Download the prebuilt Apple Silicon Mac a
 | Recording settings | Turns recording on or changes camera settings. | Connected to the GUI, with state checks and confirmation. Tested with the developer-owned Mac and F100. |
 | Import | Brings stored camera records to your Mac. | Connected to the GUI; saves records to the library and export files. Tested with the developer-owned Mac and F100. |
 
-GUI import, erasure and recording changes have been tested with the developer-owned Mac and F100. Final review of the latest interface and help changes remains. The app build targets Apple Silicon. Its bundled binaries require macOS 14.0 or later, but it has only been exercised on macOS 26.6.2; behavior on older macOS releases and Intel Macs is unverified.
+GUI import, erasure and recording changes have been tested with the developer-owned Mac and F100. The v0.7.1 build also passed first-use connection and GUI import and save (one roll, 12 frames) on an additional Mac. The app build targets Apple Silicon. Its bundled binaries require macOS 14.0 or later, but physical testing covers only macOS 26.6.2 and 26.2; earlier macOS releases and Intel Macs remain unverified.
 
 
 **This release does not write metadata to scan images.** The scan button and screen are excluded, and ExifTool is not bundled. The exported ExifTool CSV is a working file for later use; it does not modify photos automatically.

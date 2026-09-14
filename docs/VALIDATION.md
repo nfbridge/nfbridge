@@ -12,10 +12,15 @@ The complete LQ frame was 1550 bytes. Payload SHA-256: `b9f86e8145f6a8db2a57fb84
 
 The public export is a derivative: personal fixed-adapter entry points, private evidence and external value tables are omitted. Included synthetic tests validate transport behavior and public functionality without hardware; they must not be described as replaying the private 117-frame capture.
 
-Only this observed hardware configuration has been established. Later GUI import,
+Only this observed F100/adapter configuration has been established. Later GUI import,
 recording-setting changes and erasure were also exercised on the developer-owned Mac/F100
-with user confirmations (private project worklog §§232–234). This does not verify
-other adapters, Macs or a fresh-user installation.
+with user confirmations (private project worklog §§232–234). On 2026-09-14, the
+v0.7.1 disk-name fix was tried on an additional macOS 26.2 Mac: user-provided
+screenshots show first-use connection followed by GUI import and save of one roll
+with 12 frames, and the generated HTML table opened in a browser. The second
+Mac's raw serial capture was not independently compared, and setting changes
+or erasure were not tested there. Other adapters and a fresh-user installation
+remain unverified.
 
 ## Formula-default update
 
