@@ -1,0 +1,64 @@
+# -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_all
+
+datas = []
+binaries = []
+hiddenimports = []
+tmp_ret = collect_all('tkinterdnd2')
+datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+
+
+a = Analysis(
+    ['app/gui.py'],
+    pathex=['app', 'mac-client', 'mac-connection'],
+    binaries=binaries,
+    datas=datas,
+    hiddenimports=hiddenimports,
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    # Research-only CLI/UTM helpers are not part of the end-user app.
+    excludes=['f100_first_use_assistant', 'f100_preauth_gate', 'f100_serial_relay'],
+    noarchive=False,
+    optimize=0,
+)
+pyz = PYZ(a.pure)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    [],
+    exclude_binaries=True,
+    name='Neo Film Bridge',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,
+    console=False,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+    icon=['app/assets/nfbridge.icns'],
+)
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.datas,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    name='Neo Film Bridge',
+)
+app = BUNDLE(
+    coll,
+    name='Neo Film Bridge.app',
+    icon='app/assets/nfbridge.icns',
+    bundle_identifier='org.neofilmbridge.app',
+    info_plist={
+        'CFBundleShortVersionString': '0.7.0',
+        'CFBundleVersion': '7',
+        'LSMinimumSystemVersion': '14.0',
+    },
+)

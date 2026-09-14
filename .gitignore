@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+.venv*/
+evidence/
+captures/
+terminal-transcript.txt
+terminal-transcript.sha256
+
+
+.runtime/
+user-data/
+build/
+dist/

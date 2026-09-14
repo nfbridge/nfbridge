@@ -1,0 +1,32 @@
+{
+  "schema": "f100-parity-reference/v1",
+  "source": {
+    "application": "synthetic",
+    "reference_role": "synthetic_golden",
+    "evidence_kind": "synthetic",
+    "hardware_validated": false
+  },
+  "expected": {
+    "mode": "simple",
+    "roll_count": 1,
+    "rolls": [
+      {
+        "roll_number": 1,
+        "film_speed_raw": "0x0d",
+        "frame_count": 1,
+        "frames": [
+          {
+            "frame_number": 1,
+            "shutter_speed_raw": "0xfd",
+            "aperture_raw": "0x00",
+            "focal_length_raw": "0x00",
+            "flash_flags_raw": "0x00",
+            "flash_type": "off",
+            "multiple_exposure": false
+          }
+        ]
+      }
+    ]
+  }
+}
+

@@ -1,0 +1,21 @@
+{
+  "schema": "f100-usb-admission-snapshot/0.2",
+  "generated_utc": "2026-08-30T00:00:00Z",
+  "snapshot_complete": true,
+  "parse_errors": [],
+  "commands": {},
+  "usb_enumeration": {
+    "primary": "ioreg_IOUSBHostDevice",
+    "crosscheck": "system_profiler_SPUSBDataType",
+    "crosscheck_status": "BOTH_EMPTY",
+    "ioreg_device_count": 0,
+    "system_profiler_device_count": 0
+  },
+  "usb_devices": [],
+  "hid_devices": [],
+  "disk_identifiers": ["disk0"],
+  "network_interfaces": ["en0", "lo0"],
+  "system_extension_lines": ["synthetic-baseline"],
+  "serial_paths": [],
+  "evidence_boundary": "SYNTHETIC OFFLINE FIXTURE; not a macOS hardware snapshot"
+}

@@ -1,0 +1,69 @@
+{
+  "schema": "f100-parity-reference/v1",
+  "source": {
+    "application": "synthetic",
+    "reference_role": "synthetic_golden",
+    "evidence_kind": "synthetic",
+    "hardware_validated": false
+  },
+  "expected": {
+    "mode": "detailed",
+    "roll_count": 2,
+    "rolls": [
+      {
+        "roll_number": 1,
+        "film_speed_raw": "0x0d",
+        "frame_count": 1,
+        "frames": [
+          {
+            "frame_number": 1,
+            "shutter_speed_raw": "0x3c",
+            "aperture_raw": "0x08",
+            "focal_length_raw": "0x32",
+            "flash_flags_raw": "0x00",
+            "flash_type": "off",
+            "multiple_exposure": false,
+            "lens_shortest_focal_raw": "0x18",
+            "lens_longest_focal_raw": "0x50",
+            "max_aperture_short_raw": "0x08",
+            "max_aperture_long_raw": "0x10",
+            "manual_ev_diff_raw": "0x00",
+            "exposure_comp_raw": "0x01",
+            "flash_comp_raw": "0x02",
+            "mode_flags_raw": "0x00",
+            "meter_mode": "matrix",
+            "exposure_mode": "P",
+            "flash_sync": "normal"
+          }
+        ]
+      },
+      {
+        "roll_number": 2,
+        "film_speed_raw": "0x0c",
+        "frame_count": 1,
+        "frames": [
+          {
+            "frame_number": 2,
+            "shutter_speed_raw": "0xfd",
+            "aperture_raw": "0x09",
+            "focal_length_raw": "0x33",
+            "flash_flags_raw": "0x11",
+            "flash_type": "unknown(0x01)",
+            "multiple_exposure": true,
+            "lens_shortest_focal_raw": "0x20",
+            "lens_longest_focal_raw": "0x55",
+            "max_aperture_short_raw": "0x09",
+            "max_aperture_long_raw": "0x11",
+            "manual_ev_diff_raw": "0x03",
+            "exposure_comp_raw": "0x04",
+            "flash_comp_raw": "0x05",
+            "mode_flags_raw": "0x7f",
+            "meter_mode": "center_weighted",
+            "exposure_mode": "M",
+            "flash_sync": "unknown(0x07)"
+          }
+        ]
+      }
+    ]
+  }
+}

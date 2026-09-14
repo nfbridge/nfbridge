@@ -1,0 +1,1 @@
+Synthetic Detailed records only. Container sizes, counts and offsets mirror read-002/003/004; field values are invented constants. These three inputs demonstrate unchanged existing rolls and appended rolls, not within-roll growth. Separate shortened-last-roll cases are needed for growth. Equal synthetic contents are deliberately not evidence of physical roll identity.

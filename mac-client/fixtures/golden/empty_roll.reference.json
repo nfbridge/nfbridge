@@ -1,0 +1,22 @@
+{
+  "schema": "f100-parity-reference/v1",
+  "source": {
+    "application": "synthetic",
+    "reference_role": "synthetic_golden",
+    "evidence_kind": "synthetic",
+    "hardware_validated": false
+  },
+  "expected": {
+    "mode": "simple",
+    "roll_count": 1,
+    "rolls": [
+      {
+        "roll_number": 3,
+        "film_speed_raw": "0x0d",
+        "frame_count": 0,
+        "frames": []
+      }
+    ]
+  }
+}
+

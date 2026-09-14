@@ -1,0 +1,29 @@
+{
+  "schema": "f100-usb-admission-snapshot/0.2",
+  "generated_utc": "2026-08-30T00:00:01Z",
+  "snapshot_complete": true,
+  "parse_errors": [],
+  "commands": {},
+  "usb_enumeration": {
+    "primary": "ioreg_IOUSBHostDevice",
+    "crosscheck": "system_profiler_SPUSBDataType",
+    "crosscheck_status": "SYSTEM_PROFILER_EMPTY_IOREG_ACTIVE",
+    "ioreg_device_count": 1,
+    "system_profiler_device_count": 0
+  },
+  "usb_devices": [
+    {
+      "_name": "Synthetic PL2303 fixture",
+      "vendor_id": "0x067b",
+      "product_id": "0x2303",
+      "tree_path": ["Synthetic PL2303 fixture"],
+      "fingerprint_sha256": "synthetic-pl2303-fingerprint"
+    }
+  ],
+  "hid_devices": [],
+  "disk_identifiers": ["disk0"],
+  "network_interfaces": ["en0", "lo0"],
+  "system_extension_lines": ["synthetic-baseline"],
+  "serial_paths": ["/dev/cu.synthetic-pl2303"],
+  "evidence_boundary": "SYNTHETIC OFFLINE FIXTURE; not a macOS hardware snapshot"
+}

@@ -1,0 +1,8 @@
+# Synthetic detailed-mode payload: two rolls, one frame in each roll.
+01 F3 00 01
+01 3C 08 32 00 18 50 08 10 00 01 02 00
+0D FD
+F3 00 02
+02 FD 09 33 11 20 55 09 11 03 04 05 7F
+0C FD
+

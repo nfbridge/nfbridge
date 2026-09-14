@@ -1,0 +1,10 @@
+{
+  "schema": "f100-usb-admission-policy/0.1",
+  "allowed_new_usb_fingerprints": ["synthetic-pl2303-fingerprint"],
+  "allowed_new_serial_path_regexes": ["/dev/cu\\.synthetic-pl2303"],
+  "forbid_new_hid": true,
+  "forbid_new_disks": true,
+  "forbid_new_network_interfaces": true,
+  "forbid_system_extension_changes": true,
+  "note": "SYNTHETIC OFFLINE FIXTURE ONLY; never copy this allowlist to live evidence"
+}

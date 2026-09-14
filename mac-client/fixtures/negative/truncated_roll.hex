@@ -1,0 +1,3 @@
+# Synthetic invalid payload: frame starts but the record and trailer are truncated.
+00 F3 00 01 01 3C
+
