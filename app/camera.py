@@ -167,6 +167,10 @@ class CameraService:
                 details = exc.report
                 app.call_main(lambda: self.prompt(app, 'archive-incomplete', details))
                 return {'status': 'archive-blocked'}
+            except connection.SnapshotProblem:
+                # This is a pre-serial inspection failure with safe, specific
+                # check names; keep it intact for the bilingual GUI dialog.
+                raise
             except Exception as exc:
                 text = str(exc)
                 if 'Unknown MQ bits' in text or 'empty memory' in text:

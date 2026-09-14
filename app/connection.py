@@ -18,6 +18,67 @@ class ConnectionProblem(ValueError):
     pass
 
 
+_CHECK_LABELS = {
+    'usb_ioreg': ('USB 장치', 'USB devices'),
+    'usb_system_profiler': ('USB 보조 조회', 'USB cross-check'),
+    'usb_crosscheck': ('USB 정보 대조', 'USB information cross-check'),
+    'hid': ('입력 장치', 'input devices'),
+    'disks': ('디스크 목록', 'disk list'),
+    'interfaces': ('네트워크 목록', 'network interfaces'),
+    'system_extensions': ('시스템 확장 목록', 'system extensions'),
+    'serial_paths': ('통신 포트 목록', 'serial ports'),
+}
+
+
+class SnapshotProblem(ConnectionProblem):
+    """Show only safe check names and statuses, never raw device data."""
+
+    def __init__(self, before, after):
+        self.failures = []
+        for phase, snapshot in (('before', before), ('after', after)):
+            if snapshot.get('snapshot_complete') is True:
+                continue
+            reported = set()
+            commands = snapshot.get('commands')
+            if isinstance(commands, dict):
+                for name, status in commands.items():
+                    if name not in _CHECK_LABELS or not isinstance(status, dict) or status.get('ok') is not False:
+                        continue
+                    code = status.get('exit_code')
+                    code = code if type(code) is int else None
+                    self.failures.append((phase, name, 'command', code))
+                    reported.add(name)
+            errors = snapshot.get('parse_errors')
+            if isinstance(errors, list):
+                for error in errors:
+                    # The exception text can contain local paths or device names.
+                    # Keep only its controlled check name, never its raw message.
+                    name = error.split(':', 1)[0] if isinstance(error, str) else ''
+                    if name in _CHECK_LABELS and name not in reported:
+                        self.failures.append((phase, name, 'parse', None))
+                        reported.add(name)
+            if not reported:
+                self.failures.append((phase, 'unknown', 'unknown', None))
+        super().__init__(self.localized('ko'))
+
+    def localized(self, language):
+        english = language == 'en'
+        heading = 'System connection information could not be checked.' if english else '시스템 연결 정보를 확인하지 못했습니다.'
+        phase_names = {'before': 'Before connection' if english else '연결 전',
+                       'after': 'After connection' if english else '연결 후'}
+        kind_names = {'command': 'command failed' if english else '명령 실행 실패',
+                      'parse': 'could not interpret result' if english else '결과 해석 실패',
+                      'unknown': 'cause not recorded' if english else '원인 기록 없음'}
+        lines = [heading]
+        for phase, name, kind, code in self.failures:
+            label = _CHECK_LABELS.get(name, ('기타 검사', 'other check'))[1 if english else 0]
+            detail = kind_names[kind]
+            if code is not None:
+                detail += f' (exit {code})' if english else f' (종료 코드 {code})'
+            lines.append(f'{phase_names[phase]}: {label} — {detail}')
+        return '\n'.join(lines)
+
+
 def sealed(value):
     value=dict(value)
     value.pop('self_sha256_without_this_field',None)
@@ -27,7 +88,7 @@ def sealed(value):
 
 def inspect(before, after):
     if not before.get('snapshot_complete') or not after.get('snapshot_complete'):
-        raise ConnectionProblem('연결 정보를 모두 가져오지 못했습니다. 상세 USB 조회 권한을 확인하세요.')
+        raise SnapshotProblem(before, after)
     try:
         _,_,preview=gate.derive_candidate(before,after,None,None)
     except (ValueError, TypeError) as exc:

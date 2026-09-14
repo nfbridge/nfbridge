@@ -730,10 +730,10 @@ def _normalize_disks(payload: bytes) -> List[str]:
 
     all_disk_set = set(all_disks)
 
-    # These top-level containers are set-like string lists in diskutil's plist
-    # shape. Validate uniqueness for both. WholeDisks contains disk identifiers
-    # and must agree with AllDisks; VolumesFromDisks has distinct field semantics
-    # and is deliberately not treated as an AllDisks subset.
+    # WholeDisks contains unique device identifiers and must agree with
+    # AllDisks. VolumesFromDisks contains display names, NOT device IDs:
+    # different volumes (including a mounted system snapshot) can share a
+    # name. Validate its container and string values, but not uniqueness.
     for name in ("WholeDisks", "VolumesFromDisks"):
         if name not in parsed:
             continue
@@ -742,7 +742,7 @@ def _normalize_disks(payload: bytes) -> List[str]:
             type(identifier) is str and identifier for identifier in values
         ):
             raise ValueError("diskutil " + name + " is not a list of identifiers")
-        if len(values) != len(set(values)):
+        if name == "WholeDisks" and len(values) != len(set(values)):
             raise ValueError("diskutil " + name + " contains duplicate identifiers")
         if name == "WholeDisks" and not set(values).issubset(all_disk_set):
             raise ValueError("diskutil " + name + " contradicts AllDisks")

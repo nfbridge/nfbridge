@@ -14,6 +14,7 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'app'))
 import nfbridge as app
 import connection
+from i18n import Translator
 import report
 import f100_live_binding as binding
 
@@ -87,6 +88,34 @@ class GuidedTests(unittest.TestCase):
         for field,new in [('serial_paths',[]),('usb_devices',after['usb_devices']*2),('snapshot_complete',False)]:
             changed=copy.deepcopy(after);changed[field]=new
             with self.subTest(field=field),self.assertRaises(connection.ConnectionProblem):connection.inspect(before,changed)
+
+    def test_incomplete_snapshot_names_failed_check_without_private_details(self):
+        before,after=snapshots()
+        for snapshot in (before,after):
+            snapshot['snapshot_complete']=False
+            snapshot['parse_errors']=['disks: ValueError: SECRET_DEVICE_NAME']
+            snapshot['commands']={'disks':{'ok':True,'exit_code':0,'stderr':''}}
+        with self.assertRaises(connection.SnapshotProblem) as caught:
+            connection.inspect(before,after)
+        error=caught.exception
+        self.assertIn('연결 전: 디스크 목록',str(error))
+        self.assertIn('연결 후: 디스크 목록',str(error))
+        self.assertNotIn('SECRET_DEVICE_NAME',str(error))
+        with tempfile.TemporaryDirectory() as folder:
+            translator=Translator(folder)
+            translator.language='en'
+            self.assertIn('disk list',translator.error(error))
+            self.assertNotIn('private-volume-name',translator.error(error))
+
+    def test_incomplete_snapshot_reports_command_and_exit_status(self):
+        before,after=snapshots()
+        after['snapshot_complete']=False
+        after['parse_errors']=['disks: command failed']
+        after['commands']={'disks':{'ok':False,'exit_code':2,'stderr':'sensitive serial'}}
+        with self.assertRaises(connection.SnapshotProblem) as caught:
+            connection.inspect(before,after)
+        self.assertIn('디스크 목록 — 명령 실행 실패 (종료 코드 2)',str(caught.exception))
+        self.assertNotIn('sensitive serial',str(caught.exception))
 
     def test_report_escapes_text_and_never_overwrites(self):
         data=app.demo_data();data['rolls'][0]['frames'][0]['shutter_speed']='<script>alert(1)</script>'

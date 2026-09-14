@@ -12,6 +12,7 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT/'app'), str(ROOT/'mac-client'), str(ROOT/'mac-connection')]
 import camera
+import connection
 from test_guided import snapshots
 from test_maintenance import state, response, DATA, _FakeSerialModule
 from test_transport_regressions import ReplyPort
@@ -19,6 +20,16 @@ import f100_reconnect as reconnect
 
 
 class CameraServiceTests(unittest.TestCase):
+    def test_snapshot_failure_reaches_gui_with_failed_check(self):
+        app = mock.Mock()
+        app.run.side_effect = lambda work, done: work()
+        service = camera.CameraService('/unused', backend=mock.Mock())
+        before = {'snapshot_complete': False, 'parse_errors': ['disks: private path']}
+        error = connection.SnapshotProblem(before, {'snapshot_complete': True})
+        with self.assertRaises(connection.SnapshotProblem) as caught:
+            service.launch(app, lambda prompt: (_ for _ in ()).throw(error), mock.Mock(), reading=True)
+        self.assertIs(caught.exception, error)
+
     def test_failure_messages_distinguish_read_and_confirmed_change(self):
         app = mock.Mock()
         app.call_main.side_effect = lambda callback: callback()

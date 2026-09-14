@@ -306,7 +306,7 @@ class App:
                 self.events.put((done, action(), None))
             except Exception as exc:
                 logging.exception('Background operation failed')
-                self.events.put((done, None, str(exc)))
+                self.events.put((done, None, exc))
         threading.Thread(target=work, daemon=True).start()
 
     def poll(self):
