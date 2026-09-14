@@ -60,6 +60,8 @@ When you save, choose the files you need from the five options below. **HTML, th
 
 At the start of Import, choose where to save and name a new folder. The library name is suggested by default; the camera's internal record number is not added. If the name exists, choose another to preserve those files. The app suggests the last successful location next time. Internal communication records are stored separately.
 
+The HTML report uses that folder name as its heading. Long English column headings wrap. On a narrow window, scroll the table horizontally; zooming out in Safari can show more columns at once.
+
 The export folder also contains one hidden bookkeeping file. Choosing the EXIF working CSV creates its row map and usage notes too. The app library is stored at `~/Library/Application Support/Neo Film Bridge/`.
 
 Choose Korean or English output, or your own layout, under **Document template**. [Using your own template](docs/DOCUMENT_TEMPLATES.md)

@@ -13,8 +13,8 @@ WHEN=datetime(2026,9,13,21,40,tzinfo=timezone.utc)
 class ExportTests(unittest.TestCase):
     def test_selected_formats_only_create_requested_user_files(self):
         with tempfile.TemporaryDirectory() as d:
-            root=Path(d)/'output'
-            result=report.save(nfbridge.demo_data(),root,imported=WHEN,formats={'html','json'})
+            root=Path(d)/'My Film & Friends'
+            result=report.save(nfbridge.demo_data(),root,imported=WHEN,language='en',formats={'html','json'})
             self.assertEqual(result.name,'index.html')
             self.assertTrue((root/'index.html').exists())
             self.assertTrue((root/'shooting-data.json').exists())
@@ -22,6 +22,8 @@ class ExportTests(unittest.TestCase):
             self.assertFalse((root/'exiftool.csv').exists())
             self.assertFalse((root/'F100_roll1.md').exists())
             page=(root/'index.html').read_text()
+            self.assertIn('<h1>My Film &amp; Friends</h1>',page)
+            self.assertIn('<title>My Film &amp; Friends — Shooting records · Neo Film Bridge</title>',page)
             self.assertIn('shooting-data.json',page)
             self.assertNotIn('exiftool.csv',page)
 

@@ -1,6 +1,8 @@
-# Neo Film Bridge v0.7.1 preview — macOS app candidate
+# Neo Film Bridge v0.7.2 preview — HTML report improvements
 
-Fixed first-use cable inspection rejecting distinct disks with the same display name. If a system check fails, the app now identifies the failed check instead of assuming a USB permission problem. On an additional Mac, the patched build imported and saved one roll with 12 frames through the GUI; the generated HTML table was opened and checked.
+Long English column headings no longer force the HTML report into a fixed-width table that stays clipped when Safari is zoomed out. Headings now wrap, and the report uses the available window width. The main heading and browser tab title use the folder name chosen when saving. Re-save a record with this version to update an existing HTML report.
+
+The previous v0.7.1 release fixed first-use cable inspection rejecting distinct disks with the same display name. On an additional Mac, that build imported and saved one roll with 12 frames through the GUI, and its HTML table was opened and checked. The new v0.7.2 layout has been checked with synthetic data and a bundled-app demo launch, but has not yet been checked in Safari on that additional Mac.
 
 [한국어](RELEASE_NOTES.md)
 

@@ -77,6 +77,7 @@ def save(data, directory, *, demo=False, metadata=None, imported=None, sections=
     body=''.join('<tr data-roll="'+esc(row['roll'])+'">'+''.join('<td>'+esc(row[key])+'</td>' for key,_ in columns)+'</tr>' for row in records)
     label=t('예제 데이터 · 카메라를 읽지 않았습니다','Synthetic demo · no camera was read') if demo else t('가져온 촬영정보','Imported shooting records')
     title=t('촬영정보','Shooting records')
+    project_name = directory.name
     summary=str(data.get('roll_count',0))+t('롤 · ',' rolls · ')+str(len(records))+t('컷',' frames')+' · Nikon F100'
     link_items=[]
     if 'csv' in formats: link_items.append('<a href="shooting-data.csv" download>'+t('CSV 저장','Save CSV')+'</a>')
@@ -88,10 +89,27 @@ def save(data, directory, *, demo=False, metadata=None, imported=None, sections=
     if 'json' in formats:
         footer += ' ' + t('원본 데이터 보관 파일에서 원시값과 해석값을 함께 확인할 수 있습니다.', 'The original-data file keeps raw and interpreted values together.')
     local=t('이 보고서는 컴퓨터 안에서 열립니다. 외부 서버에 촬영정보를 전송하지 않습니다.','This report opens locally. No shooting data is sent to an external server.')
-    css = 'body{font:16px -apple-system,BlinkMacSystemFont,sans-serif;background:#f7f5f0;color:#202c29;margin:0;padding:36px}main{max-width:1400px;margin:auto}h1{font-size:32px;margin-bottom:8px}.muted{color:#596963}nav{display:flex;gap:12px;flex-wrap:wrap;margin:24px 0}a,select{padding:10px 14px;border:1px solid #bac8c0;border-radius:8px;background:white;color:#174b39;text-decoration:none;font:inherit}.scroll{overflow:auto;border:1px solid #d5ddd6;border-radius:10px;background:white}table{border-collapse:collapse;width:100%;white-space:nowrap}th,td{text-align:left;padding:12px 14px;border-bottom:1px solid #e6ebe6}th{background:#e9efe8;position:sticky;top:0}tr:hover{background:#f2f6f1}.tag{display:inline-block;background:#e5eddb;padding:7px 12px;border-radius:20px}footer{margin-top:24px;font-size:14px;line-height:1.7}'
+    css = (
+        'body{font:16px -apple-system,BlinkMacSystemFont,sans-serif;background:#f7f5f0;'
+        'color:#202c29;margin:0;padding:clamp(12px,2vw,32px)}'
+        'main{width:100%;box-sizing:border-box}'
+        'h1{font-size:32px;margin-bottom:8px}.muted{color:#596963}'
+        'nav{display:flex;gap:12px;flex-wrap:wrap;margin:24px 0}'
+        'a,select{padding:10px 14px;border:1px solid #bac8c0;border-radius:8px;'
+        'background:white;color:#174b39;text-decoration:none;font:inherit}'
+        '.scroll{overflow-x:auto;border:1px solid #d5ddd6;border-radius:10px;background:white}'
+        'table{border-collapse:collapse;width:100%}'
+        'th,td{text-align:left;padding:10px 8px;border-bottom:1px solid #e6ebe6}'
+        'th{background:#e9efe8;position:sticky;top:0;white-space:normal;'
+        'overflow-wrap:anywhere;line-height:1.25}'
+        'td{white-space:nowrap}'
+        'tr:hover{background:#f2f6f1}'
+        '.tag{display:inline-block;background:#e5eddb;padding:7px 12px;border-radius:20px}'
+        'footer{margin-top:24px;font-size:14px;line-height:1.7}'
+    )
     page=(f'<!doctype html><html lang="{language}"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-          f'<title>Neo Film Bridge — {title}</title><style>{css}</style><main><span class="tag">{esc(label)}</span>'
-          f'<h1>Neo Film Bridge</h1><p class="muted">{summary}</p><nav><select id="roll" aria-label="'+t('롤 선택','Select roll')+'"><option value="">'+t('모든 롤','All rolls')+'</option>'+options+'</select>'
+          f'<title>{esc(project_name)} — {title} · Neo Film Bridge</title><style>{css}</style><main><span class="tag">{esc(label)}</span>'
+          f'<h1>{esc(project_name)}</h1><p class="muted">Neo Film Bridge · {summary}</p><nav><select id="roll" aria-label="'+t('롤 선택','Select roll')+'"><option value="">'+t('모든 롤','All rolls')+'</option>'+options+'</select>'
           +links+'</nav>'
           '<div class="scroll"><table><thead><tr>'+headings+'</tr></thead><tbody>'+body+'</tbody></table></div><footer class="muted">'+footer+'<br>'+local+'</footer></main>'
           "<script>document.getElementById('roll').addEventListener('change',function(){document.querySelectorAll('tbody tr').forEach(r=>r.hidden=this.value!==''&&r.dataset.roll!==this.value);});</script></html>")

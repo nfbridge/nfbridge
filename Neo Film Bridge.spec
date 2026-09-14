@@ -57,8 +57,8 @@ app = BUNDLE(
     icon='app/assets/nfbridge.icns',
     bundle_identifier='org.neofilmbridge.app',
     info_plist={
-        'CFBundleShortVersionString': '0.7.1',
-        'CFBundleVersion': '8',
+        'CFBundleShortVersionString': '0.7.2',
+        'CFBundleVersion': '9',
         'LSMinimumSystemVersion': '14.0',
     },
 )
