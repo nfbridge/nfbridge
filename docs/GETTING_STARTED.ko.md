@@ -32,4 +32,4 @@ Nikon F100이 **이미 저장한 촬영정보**를 Mac으로 가져오는 앱입
 
 이 프로젝트는 Nikon과 관계없는 독립 작업입니다. [Python](https://www.python.org/), [Tcl/Tk](https://www.tcl.tk/), [pySerial](https://github.com/pyserial/pyserial), [PyInstaller](https://pyinstaller.org/), [tkinterdnd2](https://github.com/Eliav2/tkinterdnd2)를 앱에 사용했습니다. [ExifTool](https://exiftool.org/)은 향후 스캔 작업을 위해 참고했지만 이번 앱에 넣지 않았습니다. 초기 연구에는 [nikonserial](https://github.com/schoerg/nikonserial), [pikon](https://github.com/rhaamo/pikon), [F90X serial documentation](https://github.com/antarktikali/f90x-serial-documentation)와 [r/AnalogCommunity의 Photo Secretary 글](https://www.reddit.com/r/AnalogCommunity/comments/15m5kxj/nikon_ac2we_photo_secretary_ii_for_windows_works/)이 도움이 됐습니다. Photo Secretary와 Camera Companion은 비교용 참조 프로그램이며 동봉하지 않았습니다. [자세한 출처](ACKNOWLEDGEMENTS.md)
 
-실물 GUI 가져오기·설정 변경·삭제는 프로젝트 Mac과 F100 한 구성에서 확인했습니다. 다른 케이블·Mac·새 사용자 계정의 첫 실행은 아직 시험하지 않았습니다. [검증 범위](VALIDATION.md)
+실물 GUI 가져오기·설정 변경·삭제는 개발자가 소유한 Mac과 F100 한 구성에서 확인했습니다. 다른 케이블·Mac·새 사용자 계정의 첫 실행은 아직 시험하지 않았습니다. [검증 범위](VALIDATION.md)

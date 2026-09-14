@@ -13,6 +13,6 @@
 
 현재 USB 구성은 PL2303·macOS 내장 드라이버로 검증한 비공식 호환 구성입니다. Nikon 매뉴얼의 MC-31/MC-33·PC 직렬 포트 및 전원 OFF 연결 절차와 다릅니다. 공식 지원 구성이나 전기적 적합성 인증을 뜻하지 않습니다.
 
-[English](F100_RECORDING.en.md). 근거: Nikon AC-2WE Photo Secretary II for F100 매뉴얼 인쇄 p.11, 23–25. GUI 가져오기·설정 변경·삭제는 프로젝트 Mac/F100 한 구성에서 실물 시험했습니다. 다른 구성의 동작을 보증하지 않습니다.
+[English](F100_RECORDING.en.md). 근거: Nikon AC-2WE Photo Secretary II for F100 매뉴얼 인쇄 p.11, 23–25. GUI 가져오기·설정 변경·삭제는 개발자가 소유한 Mac/F100 한 구성에서 실물 시험했습니다. 다른 구성의 동작을 보증하지 않습니다.
 
 [Simple/Detailed 저장 항목과 36컷 환산](../README.md#simple과-detailed는-무엇이-다른가요) · [저장량 계산](CAPACITY.md) · [삭제 전 보관 확인](ARCHIVE_CHECKS.md)

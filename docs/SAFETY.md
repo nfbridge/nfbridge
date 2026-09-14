@@ -4,7 +4,7 @@ The original implementation completed one physical Mac/F100 read using a
 Prolific 067B:2303 adapter and AppleUSBPLCOM. See [validation](VALIDATION.md)
 for the measured results and limits. The guided workflow in this development
 preview passed offline tests and was used for camera import, erase and
-recording-setting changes on the project's Mac and F100. See the private
+recording-setting changes on the developer-owned Mac and F100. See the private
 project worklog sections 232–234 for the tested sequence. Other cameras,
 cables and a fresh-user installation are unverified.
 
@@ -16,7 +16,7 @@ point. Offline examples and table checks never open a serial port.
 The normal read path reads existing camera records. The separately selected
 [maintenance operation](MAINTENANCE.md) can archive, erase and enable Detailed
 recording with separate confirmations. The GUI path was physically exercised on
-the project Mac/F100 with user confirmations, including the counter-E check. A successful
+the developer-owned Mac/F100 with user confirmations, including the counter-E check. A successful
 empty result and a failed connection are different outcomes. Keep the original
 capture files when investigating either.
 

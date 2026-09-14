@@ -13,6 +13,6 @@ Recording starts only after film is loaded. Factory defaults are recording off a
 
 The tested USB setup uses PL2303 and the built-in macOS driver. It is an unofficial compatible configuration, different from the manual's MC-31/MC-33, PC serial port and powered-off connection procedure. It is not Nikon endorsement or electrical certification.
 
-[한국어](F100_RECORDING.ko.md). Source: Nikon AC-2WE Photo Secretary II for F100 manual, printed pp.11 and 23–25. GUI import, settings changes and erasure were physically exercised on one project Mac/F100 setup; this does not establish broader compatibility.
+[한국어](F100_RECORDING.ko.md). Source: Nikon AC-2WE Photo Secretary II for F100 manual, printed pp.11 and 23–25. GUI import, settings changes and erasure were physically exercised on one developer-owned Mac/F100 setup; this does not establish broader compatibility.
 
 [Simple/Detailed fields and 36-exposure equivalents](../README.en.md#how-do-simple-and-detailed-differ) · [Capacity calculation](CAPACITY.md) · [Archive checks before erasing](ARCHIVE_CHECKS.md)

@@ -13,7 +13,7 @@ The complete LQ frame was 1550 bytes. Payload SHA-256: `b9f86e8145f6a8db2a57fb84
 The public export is a derivative: personal fixed-adapter entry points, private evidence and external value tables are omitted. Included synthetic tests validate transport behavior and public functionality without hardware; they must not be described as replaying the private 117-frame capture.
 
 Only this observed hardware configuration has been established. Later GUI import,
-recording-setting changes and erasure were also exercised on the project Mac/F100
+recording-setting changes and erasure were also exercised on the developer-owned Mac/F100
 with user confirmations (private project worklog §§232–234). This does not verify
 other adapters, Macs or a fresh-user installation.
 
