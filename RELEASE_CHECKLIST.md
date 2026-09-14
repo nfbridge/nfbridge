@@ -10,6 +10,6 @@
 - [x] GPLv3-only license selected for Neo Film Bridge's own code; bundled licenses remain separate.
 - [x] Separate private research repository retained.
 - [x] Owner approved a new public `nfbridge` source repository with fresh history.
-- [ ] Public prebuilt app release: separate from this source publication.
+- [x] Owner approved public distribution of the prebuilt app after the source push.
 
 Run `./verify.sh` after any source or documentation change, regenerate `MANIFEST.sha256`, then unpack and verify the final ZIPs, app signature and isolated demo launch.
