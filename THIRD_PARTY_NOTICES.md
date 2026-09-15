@@ -1,6 +1,6 @@
 # Third-party components in the macOS app
 
-Neo Film Bridge's own code is covered by the repository LICENSE. The app also bundles the following independently licensed components. The license texts listed below are included in both the app and source ZIPs under `third-party-licenses/`:
+Neo Film Bridge's own code is covered by the repository LICENSE. The app also bundles the following independently licensed components. The license texts listed below are included beside the app in its distribution ZIP and in the source archive under `third-party-licenses/`:
 
 - Python 3.12 runtime — Python Software Foundation License. License text: `third-party-licenses/Python-LICENSE.txt`.
 - pySerial 3.5 — BSD-3-Clause, copyright 2001–2020 Chris Liechti. License text: `third-party-licenses/pySerial-LICENSE.txt`; official version: https://github.com/pyserial/pyserial/blob/v3.5/LICENSE.txt

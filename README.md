@@ -6,7 +6,7 @@ F100은 기록 기능을 켜 두면 컷마다 셔터 속도와 조리개 등을 
 
 [English](README.en.md) · [자세한 사용법](docs/GETTING_STARTED.ko.md) · [이번 버전 변경 사항](RELEASE_NOTES.md)
 
-소스 코드는 이 저장소에 있으며, Apple Silicon Mac용 실행 앱 ZIP은 [Releases](https://github.com/nfbridge/nfbridge/releases)에서 받을 수 있습니다. 압축을 푼 뒤 `START_HERE.md`를 먼저 읽어 주세요.
+소스 코드는 이 저장소에 있으며, Apple Silicon Mac용 실행 앱 ZIP은 [Releases](https://github.com/nfbridge/nfbridge/releases)에서 받을 수 있습니다. 릴리스 ZIP을 풀면 한 폴더 안에 앱과 안내문·라이선스 고지가 나옵니다. `START_HERE.md`를 먼저 읽어 주세요.
 
 
 **이번 공개본은 스캔 사진에 촬영정보를 쓰지 않습니다.** 스캔 버튼과 화면은 제외했으며 ExifTool도 동봉하지 않습니다. 출력되는 ExifTool용 CSV는 향후 작업용 파일일 뿐, 사진을 자동으로 수정하지 않습니다.

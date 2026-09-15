@@ -6,7 +6,7 @@ With recording enabled, the F100 saves shutter speed, aperture and other setting
 
 [한국어](README.md) · [Detailed guide](docs/GETTING_STARTED.md) · [Release notes](RELEASE_NOTES.en.md)
 
-The source code is in this repository. Download the prebuilt Apple Silicon Mac app ZIP from [Releases](https://github.com/nfbridge/nfbridge/releases), then read `START_HERE.en.md` after unzipping it.
+The source code is in this repository. Download the prebuilt Apple Silicon Mac app ZIP from [Releases](https://github.com/nfbridge/nfbridge/releases). It unzips to a folder containing the app, guides and license notices. Start with `START_HERE.en.md`.
 
 ## What can I use now?
 

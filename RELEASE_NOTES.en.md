@@ -1,4 +1,6 @@
-# Neo Film Bridge v0.7.2 preview — HTML report improvements
+# Neo Film Bridge v0.7.2 preview r9 — guidance and license texts restored
+
+The r8 app ZIP contained only the app and omitted the getting-started guides, GPLv3 license and third-party notices. The r9 ZIP restores the app, Korean and English guides, release notes, LICENSE, THIRD_PARTY_NOTICES and the component license texts together in one folder. The app executable and camera communication behavior are the same as r8.
 
 Long English column headings no longer force the HTML report into a fixed-width table that stays clipped when Safari is zoomed out. Headings now wrap, and the report uses the available window width. The main heading and browser tab title use the folder name chosen when saving. Re-save a record with this version to update an existing HTML report.
 
