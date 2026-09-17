@@ -1,17 +1,84 @@
-# Neo Film Bridge v0.7.2 프리뷰 r9 — 배포 안내·라이선스 복구
+# Neo Film Bridge v0.7.2 preview r10 — FTDI 어댑터 지원, USB↔serial ancestry 하드닝, 연결 안내 개선
 
-r8 배포 ZIP에 앱만 들어 있고 시작 안내·GPLv3 라이선스·제3자 고지가 빠진 문제를 고쳤습니다. r9 ZIP은 한 폴더 안에 앱, 한국어·영어 안내문, 릴리스 노트, LICENSE, THIRD_PARTY_NOTICES와 구성요소별 라이선스 원문을 함께 담습니다. 앱 실행 파일과 카메라 통신 동작은 r8과 같습니다.
-
-영문 HTML 보고서에서 긴 열 제목이 줄바꿈되지 않고 표 폭도 제한돼, Safari 화면을 축소해도 오른쪽 열이 잘 보이지 않던 문제를 고쳤습니다. 이제 긴 열 제목은 줄바꿈되고 표가 사용 가능한 창 너비를 씁니다. 보고서의 큰 제목과 브라우저 탭 제목에는 저장할 때 정한 폴더 이름을 표시합니다. 이미 저장한 HTML을 바꾸려면 이 버전에서 다시 저장해야 합니다.
-
-이전 v0.7.1에서는 첫 연결 검사에서 서로 다른 디스크의 표시 이름이 같으면 앱이 이를 오류로 처리하던 문제를 고쳤습니다. 그 수정판을 추가 Mac에서 재시험해 F100 촬영정보 1롤·12컷을 GUI로 가져오고 저장했으며, 생성된 HTML 표도 열어 확인했습니다. v0.7.2의 새 HTML 레이아웃은 합성 자료와 앱 예제 모드로 확인했으며, 추가 Mac의 Safari 화면에서 다시 검증한 결과는 아직 없습니다.
+이번 릴리스는 새 기능이 아니라 실물 하드웨어 지원 범위를 넓히고, 그 과정에서 발견한 admission 설계상의 약점을 하드닝한 최소 유지보수입니다.
 
 [English](RELEASE_NOTES.en.md)
 
-이 프리뷰는 Apple Silicon Mac용 앱과 한국어·영어 안내를 담고 있습니다. Nikon F100에 이미 저장된 촬영정보를 롤·컷별로 보여 주고, 필요한 HTML·Markdown·JSON·일반 CSV·EXIF 작업용 CSV만 선택해 저장합니다. EXIF 작업용 CSV는 준비 파일이며, 이번 앱은 스캔 사진에 정보를 쓰지 않습니다. ExifTool도 동봉하지 않습니다.
+## 지원 어댑터 확대
 
-기록 설정 변경과 카메라 촬영기록 전체 삭제도 포함됩니다. 두 작업은 가져오기와 분리되어 있으며 사용자 확인을 거칩니다. 설정을 바꾸려면 필름 카운터가 E이고 기록 메모리가 비어 있는지 확인해야 합니다. 삭제 전에는 현재 기록을 Mac에 저장하고 다시 대조한 뒤 최종 확인을 받습니다. Mac에 보관한 기록은 나중에 볼 수 있지만 카메라에 복원할 수는 없습니다.
+케이블 확인(USB admission) 절차가 인식하는 어댑터 범위가 **Prolific PL2303(067B:2303) 정확 일치 하나**에서, **Prolific(벤더 ID `0x067b`) 및 FTDI(벤더 ID `0x0403`) 두 vendor family**로 늘었습니다.
 
-개발자가 소유한 Mac·F100과 Prolific 케이블 구성에서 GUI 가져오기, 기록 설정 변경, 삭제를 실물로 시험했습니다. 이번 수정판은 추가 Mac에서도 첫 연결과 GUI 가져오기·저장까지 확인했습니다. 이는 다른 카메라나 케이블의 호환성을 보장하지 않습니다. 실행 파일은 Apple Silicon 및 macOS 14.0 이상을 대상으로 하지만 실물 시험 범위는 개발자 Mac의 macOS 26.6.2와 추가 Mac의 macOS 26.2입니다. 새 사용자 계정에서 내려받아 처음 여는 전 과정은 아직 검증하지 않았습니다. 앱은 ad-hoc 서명됐으며 Apple 공증은 받지 않았습니다.
+연결 경로는 다음과 같습니다.
 
-소스 ZIP에는 합성 테스트 자료가 있지만 개인 촬영기록·사적 캡처·제조사 프로그램·추출 값표·USB 케이블 드라이버는 없습니다. 실행 앱 ZIP에도 케이블 드라이버는 없습니다. 시험한 케이블은 macOS 내장 드라이버를 사용했고, 다른 케이블에 드라이버가 필요하면 제조사의 macOS 지원 여부를 확인해야 합니다. 프로젝트 자체 코드는 GPLv3-only이며 동봉 구성요소에는 각각의 라이선스가 적용됩니다. 공개 실행 앱 ZIP은 이 저장소의 Releases에서 제공합니다.
+```
+Nikon F100
+→ Nikon MC-31 (RS-232 데이터 케이블)
+→ FTDI 기반 Serial-to-USB 어댑터 (또는 Prolific 어댑터)
+→ Mac
+```
+
+MC-31과 Serial-to-USB 어댑터는 서로 다른 두 장치입니다 — MC-31 자체는 USB 장치가 아니며, macOS와 이 앱이 USB identity로 관찰·검증하는 대상은 어댑터입니다. 실측 FTDI 값은 벤더 ID `0x0403`, 제품 ID `0x6001`이며, 특정 제조사·모델의 브랜드명은 지원 제품명으로 쓰지 않습니다 — "FTDI 기반 Serial-to-USB 어댑터"로 통칭합니다.
+
+**vendor match는 최종 승인이나 자동 신뢰가 아니라, admission 절차에 진입할 수 있는 사전 조건일 뿐입니다.** vendor match 이후에는 기존 fail-closed 검증(연결 전후 USB 스냅샷 대조, fingerprint sealing, topology binding, 사용자의 명시적 물리 확인, 재연결 상태 비교, 무관한 USB 변화 시 STOP, network-isolation exception 범위)이 전혀 완화 없이 그대로 적용됩니다. CH340/CH341, CP210x 등 다른 USB-serial 칩셋은 이번에도 지원하지 않으며, vendor allowlist 자체를 제거하지도 않았습니다 — 실제 사용 요구가 Prolific과 FTDI 두 경로뿐이기 때문입니다.
+
+## USB↔serial ancestry 하드닝
+
+FTDI 지원을 추가하는 과정에서, vendor allowlist 자체가 실제로 필요한 보안 경계인지를 독립적으로 감사했습니다. 그 결과 vendor 검사는 의도적으로 vendor_id를 위조하는 공격자에게는 실질적 장벽이 아니라는 점과 함께, 기존 admission 설계의 진짜 결함을 발견했습니다: "새 USB 장치 1개 + 새 `/dev/cu.*` 경로 1개"라는 **개수 일치만으로 둘을 같은 물리 장치로 간주**하고 있었고, 그 serial 경로가 실제로 candidate USB 장치에서 생성됐다는 IOKit 레지스트리 증거는 확인하지 않았습니다.
+
+Prolific과 FTDI 두 실물 어댑터에서 각각 독립적으로 수집한 IORegistry 증거를 비교한 결과, 둘 다 동일한 클래스 계층을 가졌습니다:
+
+```
+IOUSBHostDevice → IOUSBHostInterface → IOUserSerial → IOSerialBSDClient
+```
+
+(`IOUserSerial`의 드라이버 이름만 Prolific은 `AppleUSBPLCOM`, FTDI는 `AppleUSBFTDI`로 다르고, 클래스는 공통입니다. 보안 판정은 이 드라이버/벤더 문자열에 의존하지 않습니다.) 조사 중 `ioreg -a -r -c IOUSBHostDevice`로 자손을 통해 도달한 `IOSerialBSDClient`에는 `IOCalloutDevice`/`IODialinDevice` 속성이 빠질 수 있다는 macOS 동작을 실측으로 확인해, 별도의 read-only 명령(`ioreg -a -r -c IOSerialBSDClient`)을 추가하고 `IORegistryEntryID`로 두 결과를 결합했습니다. 이 하드닝 전용 collector는 serial port를 열지 않고, F100 프로토콜을 실행하지 않으며, 카메라에 어떤 명령도 보내지 않습니다.
+
+이를 근거로 다음 불변식을 추가했습니다: **candidate `/dev/cu.*` 경로는 candidate USB 장치 자신의 자손 `IOSerialBSDClient` 노드에 `IORegistryEntryID`로 귀속되어야 한다.** 기존 검사(스냅샷 대조·fingerprint·topology·사용자 확인·재연결 검증 등)는 하나도 완화·삭제하지 않았으며, 이 검사는 그 위에 추가된 독립 검사입니다.
+
+## 실물 재검증 (2026-09-17)
+
+하드닝된 admission 경로를 실제 Prolific·FTDI 어댑터로, 각각 단독 연결 상태에서, read-only 가져오기만으로 재검증했습니다(EP/NP/erase 없음).
+
+| | Prolific | FTDI |
+| --- | --- | --- |
+| VID:PID | `0x067b:0x2303` | `0x0403:0x6001` |
+| ancestry 검증 | PASS | PASS |
+| 재연결 검증 | 4/4 `MATCHED_PREVIOUS_CABLE` | 3/3 `MATCHED_PREVIOUS_CABLE` |
+| F100 read-only 통신 | 성공 | 성공 |
+
+합계 재연결 검증 7/7 통과, 두 어댑터 계열 모두 실제 F100과의 read-only 통신에 성공했습니다. 당시 F100은 사용자가 이미 촬영기록을 삭제해 둔 상태였으므로, 성공한 읽기 결과는 `mode: "detailed"`(기록 기능 켜짐), `roll_count: 0, rolls: []`입니다 — 빈 기록을 오류로 오인하지 않고 정상 처리했습니다.
+
+7회의 재연결+읽기 시도 중 3회에서 `MQ: no response within 40s`가 발생했습니다. 정확한 범위: admission 실패도, ancestry 실패도, 재연결 실패도 아니었습니다 — 해당 세션의 admission 기록도 여전히 `MATCHED_PREVIOUS_CABLE`이었고, 실패는 그 이후 실제 시리얼 I/O에서 MQ 응답을 기다리는 단계였습니다. 이 시도들에서 사용자가 F100 전원을 안내보다 늦게 켠 것으로 확인됐고 증상과 일치하지만, 이 관찰만으로 프로토콜이나 타임아웃 결함이라고 단정하지는 않습니다 — 원인을 사용자 조작으로 과도하게 확정하지도 않습니다. **이번 릴리스에서 통신 코드·타임아웃 값·재시도 로직은 전혀 수정하지 않았습니다.**
+
+## 연결 안내 개선
+
+실물시험에서 연결 순서를 혼동할 수 있는 지점 두 곳을 안내 문구로만 고쳤습니다(로직·타이밍·프로토콜 변경 없음):
+
+1. **최초 USB 연결**: USB 쪽 연결 → macOS가 액세서리 연결 허용을 물으면 먼저 허용 → 연결 완료 확인 → 그 다음에만 '예' → 카메라 쪽은 아직 연결하지 않음, 순서를 명시했습니다.
+2. **F100 전원 연결**: F100 전원 OFF 상태에서 케이블 연결 → F100 전원 ON → 켜진 것을 확인 → 그 다음에만 '예', 순서를 명시했습니다. 이전 문구는 전원을 켜기 전에 '예'를 누를 수 있는 여지가 있었고, 위 MQ 타임아웃 시도들과 증상이 일치합니다.
+
+sleep/polling 지연 추가, macOS 보안 프롬프트 우회, 자동 확인, 사용자 명시적 확인 절차 제거는 전혀 하지 않았습니다. 한국어·영어 안내에 동일한 의미가 반영됐습니다.
+
+## 검증 범위의 한계
+
+- Prolific PL2303(067B:2303): 기존 실물검증 이력에 더해 이번 read-only ancestry/reconnect 재검증까지 완료.
+- FTDI 기반 어댑터(0403:6001) + 정품 MC-31: 이전 read+erase 실물시험과 이번 read-only ancestry/reconnect 재검증 모두 완료.
+- Prolific 0x067b vendor-family 확대 중 067B:2303 이외 제품, 다른 FTDI 제품(FT230X 등): **offline 검증만** 수행했고 개별 실물검증은 하지 않았습니다.
+- CH340/CH341, CP210x 등 다른 칩셋: 지원하지 않으며 이번에도 검토하지 않았습니다.
+
+## 카메라 명령 계층
+
+F100 read protocol, EP/NP/DP write 명령, 촬영정보 해석, export, HTML 보고서 등 카메라 통신·데이터 처리 로직은 이번 변경에서 전혀 건드리지 않았습니다.
+
+## Offline 회귀
+
+- `tests/`: 166 PASS
+- `mac-connection/`: 57 PASS
+- `mac-client/`: 95 PASS, 1 SKIP(연구용 케이블 식별 도구가 공개 소스 패키지에서 제외되어 있다는 기존·무관 skip)
+- 저장소 전체 Python 컴파일 검사: 통과
+- golden 비교(`empty_roll`/`simple_one_roll`/`detailed_two_rolls`): 3/3 통과
+- `MANIFEST.sha256`: 115/115 통과
+
+## 지원 범위
+
+실행 파일 대상은 Apple Silicon이며 macOS 14.0 이상을 declares합니다. 앱은 ad-hoc 서명됐고 Apple 공증은 받지 않았습니다 — 이 상태는 이번 변경으로 바뀌지 않았습니다.
