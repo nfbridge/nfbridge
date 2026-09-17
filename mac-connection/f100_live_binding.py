@@ -25,7 +25,7 @@ GATE_SCHEMA = "f100-offline-utm-forwarding-gate/0.2"
 DISCOVERY_SESSION_SCHEMA = "f100-offline-usb-discovery/0.1"
 DISCOVERY_SUMMARY_SCHEMA = "f100-offline-usb-discovery-summary/0.1"
 APPROVAL_SCHEMA = "f100-offline-usb-manual-approval/0.1"
-SNAPSHOT_SCHEMA = "f100-usb-admission-snapshot/0.2"
+SNAPSHOT_SCHEMA = "f100-usb-admission-snapshot/0.3"
 POLICY_SCHEMA = "f100-usb-admission-policy/0.1"
 PREAUTH_SUMMARY_SCHEMA = "f100-usb-preauth-summary/0.2"
 

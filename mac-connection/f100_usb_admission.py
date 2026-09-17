@@ -28,7 +28,7 @@ from xml.etree import ElementTree
 from xml.parsers import expat
 
 
-SNAPSHOT_SCHEMA = "f100-usb-admission-snapshot/0.2"
+SNAPSHOT_SCHEMA = "f100-usb-admission-snapshot/0.3"
 POLICY_SCHEMA = "f100-usb-admission-policy/0.1"
 REPORT_SCHEMA = "f100-usb-admission-report/0.1"
 
@@ -45,6 +45,14 @@ COMMANDS = {
     "disks": ["diskutil", "list", "-plist"],
     "interfaces": ["ifconfig", "-l"],
     "system_extensions": ["systemextensionsctl", "list"],
+    # Added for the USB<->serial-path ancestry check (0.3): queried
+    # separately from usb_ioreg above because ioreg -a empirically omits
+    # IOCalloutDevice/IODialinDevice from an IOSerialBSDClient reached as a
+    # *descendant* of a different -c match, but includes them when
+    # IOSerialBSDClient is itself the -c match target. Verified directly
+    # against a live Prolific and a live FTDI adapter; see the USB<->serial
+    # ancestry audit handoff and docs/VALIDATION.md.
+    "serial_bsd_clients": ["ioreg", "-a", "-r", "-c", "IOSerialBSDClient"],
 }
 
 
@@ -487,6 +495,78 @@ def _ioreg_interface_descriptors(item: Dict[str, Any]) -> List[Dict[str, Any]]:
     return sorted(descriptors, key=_canonical_hash)
 
 
+def _ioreg_serial_client_registry_ids(item: Dict[str, Any]) -> List[int]:
+    """IORegistryEntryID of every IOSerialBSDClient in this USB device's own
+    subtree (e.g. behind its IOUSBHostInterface -> IOUserSerial driver, such
+    as AppleUSBPLCOM for Prolific or AppleUSBFTDI for FTDI -- empirically
+    observed to share this same class chain; see the USB<->serial ancestry
+    audit handoff). Stops at a nested USB device boundary, exactly like
+    _ioreg_interface_descriptors() above, so a serial client belonging to a
+    downstream child device is never attributed to this one.
+
+    ioreg -a omits IOCalloutDevice/IODialinDevice from a node reached this
+    way (only present when IOSerialBSDClient is queried directly as -c);
+    this only collects the registry id here, used to correlate against a
+    separately collected serial_bsd_clients list. See collect_snapshot().
+    """
+
+    ids: List[int] = []
+
+    def walk(node: Dict[str, Any]) -> None:
+        node_class = _require_ioreg_node_class(node)
+        if node is not item and node_class == _IOREG_USB_DEVICE_CLASS:
+            return
+        if node_class == "IOSerialBSDClient":
+            registry_id = node.get("IORegistryEntryID")
+            if isinstance(registry_id, bool) or not isinstance(registry_id, int) or registry_id <= 0:
+                raise ValueError("IOSerialBSDClient has no valid IORegistryEntryID")
+            ids.append(registry_id)
+        for child in _ioreg_children(node):
+            if not isinstance(child, dict):
+                raise ValueError("IORegistryEntryChildren contains a non-dictionary entry")
+            walk(child)
+
+    walk(item)
+    if len(ids) != len(set(ids)):
+        raise ValueError("duplicate IOSerialBSDClient IORegistryEntryID under one USB device")
+    return sorted(ids)
+
+
+def _normalize_serial_bsd_clients(payload: bytes) -> List[Dict[str, Any]]:
+    """Normalize ``ioreg -a -r -c IOSerialBSDClient``, queried directly (not
+    as a descendant of an IOUSBHostDevice match) so IOCalloutDevice /
+    IODialinDevice are actually present. See the module-level COMMANDS
+    comment and the USB<->serial ancestry audit handoff for why this
+    separate query exists."""
+
+    if payload == b"":
+        return []
+    parsed = _load_unique_plist(payload)
+    nodes = parsed if isinstance(parsed, list) else [parsed]
+    clients: List[Dict[str, Any]] = []
+    seen_ids: set = set()
+    for node in nodes:
+        if not isinstance(node, dict):
+            raise ValueError("IOSerialBSDClient plist contains a non-dictionary entry")
+        if _require_ioreg_node_class(node) != "IOSerialBSDClient":
+            raise ValueError("IOSerialBSDClient query matched an unexpected class")
+        registry_id = node.get("IORegistryEntryID")
+        if isinstance(registry_id, bool) or not isinstance(registry_id, int) or registry_id <= 0:
+            raise ValueError("IOSerialBSDClient has no valid IORegistryEntryID")
+        if registry_id in seen_ids:
+            raise ValueError("duplicate IOSerialBSDClient IORegistryEntryID")
+        seen_ids.add(registry_id)
+        _validate_optional_nonempty_strings(node, ("IOCalloutDevice", "IODialinDevice"))
+        callout = node.get("IOCalloutDevice")
+        dialin = node.get("IODialinDevice")
+        clients.append({
+            "registry_entry_id": registry_id,
+            "callout_device": callout if isinstance(callout, str) else None,
+            "dialin_device": dialin if isinstance(dialin, str) else None,
+        })
+    return sorted(clients, key=lambda c: c["registry_entry_id"])
+
+
 def _normalize_ioreg_usb(payload: bytes) -> List[Dict[str, Any]]:
     """Normalize IOUSBHostDevice plist output and preserve hub ancestry."""
 
@@ -557,6 +637,11 @@ def _normalize_ioreg_usb(payload: bytes) -> List[Dict[str, Any]]:
             }
             selected["tree_path"] = list(path)
             selected["fingerprint_sha256"] = _canonical_hash(stable)
+            # Registry ids are per-boot/per-connection, not a stable device
+            # property (a replugged device gets new ones) -- computed after
+            # the fingerprint and never included in it, exactly like
+            # location_id/tree_path above.
+            selected["serial_client_registry_ids"] = _ioreg_serial_client_registry_ids(node)
 
             previous = observations.get(registry_id)
             if previous is not None:
@@ -990,6 +1075,7 @@ def collect_snapshot(
     disks = parse("disks", _normalize_disks, [])
     interfaces = parse("interfaces", lambda data: data.decode("utf-8").split(), [])
     extensions = parse("system_extensions", _normalize_lines, [])
+    serial_bsd_clients = parse("serial_bsd_clients", _normalize_serial_bsd_clients, [])
 
     if serial_paths is None:
         found = set()
@@ -1034,11 +1120,15 @@ def collect_snapshot(
         "network_interfaces": sorted(set(interfaces)),
         "system_extension_lines": sorted(set(extensions)),
         "serial_paths": normalized_serial_paths,
+        "serial_bsd_clients": serial_bsd_clients,
         "evidence_boundary": (
             "Logical macOS enumeration snapshot only. USB identities come primarily from "
             "IORegistry and are cross-checked against any identities system_profiler reports. "
             "This does not authenticate USB firmware, prevent HID actions after approval, "
-            "or establish electrical safety."
+            "or establish electrical safety. serial_bsd_clients and each USB device's "
+            "serial_client_registry_ids exist only to verify that a candidate serial path "
+            "is an actual IORegistry descendant of the candidate USB device, not that the "
+            "device or driver is trustworthy."
         ),
     }
 
@@ -1095,6 +1185,43 @@ def _validate_snapshot_shape(name: str, snapshot: Dict[str, Any]) -> None:
                 raise ValueError(
                     f"{name}.{field} entries must be objects with string fingerprints"
                 )
+    # Required since schema 0.3. A snapshot from an older schema version, or
+    # one where this could not be computed, has no usable ancestry evidence
+    # and must fail closed here -- never be silently treated as "no serial
+    # client found" by a caller that forgot to check for the field's absence.
+    for item in snapshot.get("usb_devices", []):
+        if not isinstance(item, dict):
+            continue
+        ids = item.get("serial_client_registry_ids")
+        if (
+            not isinstance(ids, list)
+            or not all(
+                type(entry) is int and not isinstance(entry, bool) and entry > 0
+                for entry in ids
+            )
+            or len(ids) != len(set(ids))
+        ):
+            raise ValueError(
+                f"{name}.usb_devices entries must have serial_client_registry_ids "
+                "as a list of unique positive integers"
+            )
+    serial_bsd_clients = snapshot.get("serial_bsd_clients")
+    if not isinstance(serial_bsd_clients, list):
+        raise ValueError(f"{name}.serial_bsd_clients must be a list")
+    seen_client_ids: set = set()
+    for client in serial_bsd_clients:
+        if (
+            not isinstance(client, dict)
+            or type(client.get("registry_entry_id")) is not int
+            or isinstance(client.get("registry_entry_id"), bool)
+            or client["registry_entry_id"] <= 0
+            or not (client.get("callout_device") is None or isinstance(client.get("callout_device"), str))
+            or not (client.get("dialin_device") is None or isinstance(client.get("dialin_device"), str))
+        ):
+            raise ValueError(f"{name}.serial_bsd_clients entries are malformed")
+        if client["registry_entry_id"] in seen_client_ids:
+            raise ValueError(f"{name}.serial_bsd_clients has a duplicate registry_entry_id")
+        seen_client_ids.add(client["registry_entry_id"])
     for field in string_fields:
         values = snapshot.get(field)
         if not isinstance(values, list) or not all(

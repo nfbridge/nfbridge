@@ -58,7 +58,7 @@ app = BUNDLE(
     bundle_identifier='org.neofilmbridge.app',
     info_plist={
         'CFBundleShortVersionString': '0.7.2',
-        'CFBundleVersion': '9',
+        'CFBundleVersion': '10',
         'LSMinimumSystemVersion': '14.0',
     },
 )

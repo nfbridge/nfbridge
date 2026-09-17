@@ -39,8 +39,8 @@ class CameraBackend:
         self.require(prompt, 'usb-only')
         after = self.snapshot()
         device, port = connection.inspect(before, after)
-        if (device['vendor_id'].lower(), device['product_id'].lower()) != ('0x067b', '0x2303'):
-            raise ValueError('이 안내는 실물 확인된 Prolific F100 데이터 케이블용입니다. 다른 케이블은 별도 검토가 필요합니다.')
+        if not connection.is_supported_adapter(device['vendor_id'], device['product_id']):
+            raise ValueError('이 안내는 지원되는 USB-serial 어댑터(Prolific PL2303 또는 FTDI 계열)가 연결된 F100 데이터 케이블용입니다. 다른 어댑터는 별도 검토가 필요합니다.')
         self.require(prompt, 'review-cable', {'port': port, 'device': device})
         session, port = connection.prepare(self.home / 'sessions', nfbridge.stamp(), before, after,
                                            user_confirmed=True)
@@ -265,9 +265,9 @@ class CameraService:
             return self.settings_dialog(app, details)
         text = {
             'disconnect': '사용할 케이블을 확인하고 앱에 등록하겠습니다.\n\n1. 카메라 전원을 끄세요.\n2. 케이블을 카메라와 Mac 양쪽에서 빼세요.\n3. 다른 USB 장치와 허브는 그대로 두세요.\n\n케이블을 양쪽에서 모두 뺐나요?',
-            'usb-only': '케이블의 USB 쪽만 Mac에 연결하세요. 카메라 쪽은 연결하지 마세요. 준비됐나요?',
+            'usb-only': '케이블/어댑터의 USB 쪽을 Mac에 연결하세요. macOS가 액세서리 연결 허용을 물으면 먼저 허용하세요. USB 장치 연결이 완료된 것을 확인한 다음에만 이 창에서 ‘예’를 누르세요. 카메라 쪽은 아직 연결하지 마세요.',
             'review-cable': '이 장치가 직접 확인한 F100 데이터 케이블이 맞나요? 카메라는 아직 분리된 상태여야 합니다. Wi-Fi는 그대로 사용하며 이 케이블 확인을 다음 연결에도 사용합니다.\n포트: {port}',
-            'connect-camera': '카메라가 분리돼 있다면 전원을 끈 상태에서 케이블을 연결한 뒤 전원을 켜세요. Windows VM과 다른 카메라 연결 프로그램은 종료하세요. 준비됐나요?\n포트: {port}',
+            'connect-camera': 'F100의 전원이 꺼진 상태에서 카메라에 케이블을 연결하세요. 그다음 F100의 전원을 켜세요. F100의 전원이 켜진 것을 확인한 다음에만 이 창에서 ‘예’를 누르세요. Windows VM과 다른 카메라 연결 프로그램은 종료해 두세요.\n포트: {port}',
             'counter-e': '카메라의 필름 카운터가 E인지 직접 확인하세요. 앱은 이 표시를 읽을 수 없습니다. 지금 E가 표시돼 있나요?',
             'record-settings': '선택한 설정으로 바꿀까요? 다음 필름을 넣고 첫 컷으로 진행하면 적용됩니다.\n선택: {setting}\n보관 위치: {backup}',
             'erase-records': 'Mac 저장 확인: {verified_rolls}/{total_rolls}롤 · {frames}컷\n보관 폴더: {archive}\n\n미리 저장하지 않은 촬영기록은 복구할 수 없습니다. 카메라의 촬영기록 {total_rolls}롤을 전부 삭제할까요?\n이 폴더의 기록은 Mac에서 볼 수 있지만 카메라에 다시 넣을 수는 없습니다. 필름의 사진은 지워지지 않습니다.',

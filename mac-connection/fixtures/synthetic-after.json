@@ -1,5 +1,5 @@
 {
-  "schema": "f100-usb-admission-snapshot/0.2",
+  "schema": "f100-usb-admission-snapshot/0.3",
   "generated_utc": "2026-08-30T00:00:01Z",
   "snapshot_complete": true,
   "parse_errors": [],
@@ -17,7 +17,8 @@
       "vendor_id": "0x067b",
       "product_id": "0x2303",
       "tree_path": ["Synthetic PL2303 fixture"],
-      "fingerprint_sha256": "synthetic-pl2303-fingerprint"
+      "fingerprint_sha256": "synthetic-pl2303-fingerprint",
+      "serial_client_registry_ids": [1]
     }
   ],
   "hid_devices": [],
@@ -25,5 +26,12 @@
   "network_interfaces": ["en0", "lo0"],
   "system_extension_lines": ["synthetic-baseline"],
   "serial_paths": ["/dev/cu.synthetic-pl2303"],
+  "serial_bsd_clients": [
+    {
+      "registry_entry_id": 1,
+      "callout_device": "/dev/cu.synthetic-pl2303",
+      "dialin_device": "/dev/tty.synthetic-pl2303"
+    }
+  ],
   "evidence_boundary": "SYNTHETIC OFFLINE FIXTURE; not a macOS hardware snapshot"
 }

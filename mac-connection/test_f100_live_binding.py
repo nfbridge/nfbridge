@@ -50,6 +50,7 @@ class TestLiveBinding(unittest.TestCase):
             "network_interfaces": [],
             "system_extension_lines": [],
             "serial_paths": [],
+            "serial_bsd_clients": [],
         }
         sealed = {}
         before = dict(snapshot_base)
@@ -58,6 +59,7 @@ class TestLiveBinding(unittest.TestCase):
             "fingerprint_sha256": "a" * 64,
             "vendor_id": "0x0403",
             "product_id": "0x6001",
+            "serial_client_registry_ids": [],
         }]
         after["serial_paths"] = serial_paths if serial_paths is not None else ["/dev/cu.fixture"]
         before["usb_enumeration"] = {

@@ -19,7 +19,7 @@ FP = "a" * 64
 
 def _snapshot(*, cable=False, hid=False):
     value = {
-        "schema": "f100-usb-admission-snapshot/0.2",
+        "schema": "f100-usb-admission-snapshot/0.3",
         "snapshot_complete": True,
         "usb_devices": [],
         "hid_devices": [],
@@ -27,6 +27,7 @@ def _snapshot(*, cable=False, hid=False):
         "network_interfaces": ["lo0", "en0"],
         "system_extension_lines": ["baseline"],
         "serial_paths": [],
+        "serial_bsd_clients": [],
     }
     if cable:
         value["usb_devices"] = [{
@@ -35,8 +36,14 @@ def _snapshot(*, cable=False, hid=False):
             "product_id": "0x2303",
             "tree_path": ["Generic USB Hub", "PL2303 fixture"],
             "fingerprint_sha256": FP,
+            "serial_client_registry_ids": [101],
         }]
         value["serial_paths"] = ["/dev/cu.fixture", "/dev/tty.fixture"]
+        value["serial_bsd_clients"] = [{
+            "registry_entry_id": 101,
+            "callout_device": "/dev/cu.fixture",
+            "dialin_device": "/dev/tty.fixture",
+        }]
     if hid:
         value["hid_devices"] = [{"fingerprint_sha256": "hid-new"}]
     count = len(value["usb_devices"])
@@ -595,6 +602,7 @@ class TestDiscovery(unittest.TestCase):
                 "product_id": "0x2222",
                 "tree_path": ["Existing audio interface"],
                 "fingerprint_sha256": "e" * 64,
+                "serial_client_registry_ids": [],
             }
             before = _snapshot()
             before["usb_devices"] = [copy.deepcopy(existing)]
@@ -970,6 +978,228 @@ class TestDiscovery(unittest.TestCase):
                 value["manual_approval_file_sha256"],
                 subject.hashlib.sha256((session / "approval.json").read_bytes()).hexdigest(),
             )
+
+
+class VendorAllowlistSecurityAuditTests(unittest.TestCase):
+    """Independent audit: is a vendor/chipset allowlist a real security
+    boundary for this admission pipeline, and how strong is the USB<->serial
+    binding it relies on?
+
+    These tests call derive_candidate()/derive with expected_vid=expected_pid
+    =None to simulate "no vendor pre-gate at all" (the exact condition of the
+    app-layer is_supported_adapter() check being absent), and probe the
+    downstream pipeline directly. See docs/VALIDATION.md and the FTDI/vendor
+    allowlist audit handoff for the narrative conclusion (HARDEN_THEN_REMOVE:
+    the vendor allowlist is not itself a security boundary against a
+    deliberate attacker, who can freely spoof vendor_id/product_id in
+    firmware, but it is kept because the USB<->serial-path binding below is
+    weaker than it looks and narrowing candidate vendors has some incidental
+    (non-adversarial) value until that binding is hardened).
+    """
+
+    def _device(self, name, vendor_id, product_id, *, tree_path=None, serial_client_registry_ids=()):
+        return {
+            "_name": name,
+            "vendor_id": vendor_id,
+            "product_id": product_id,
+            "tree_path": tree_path or [name],
+            "fingerprint_sha256": subject._canonical_hash({"n": name, "v": vendor_id, "p": product_id}),
+            "serial_client_registry_ids": list(serial_client_registry_ids),
+        }
+
+    def _with(self, *, serial_paths=(), usb_devices=(), serial_bsd_clients=()):
+        value = _snapshot()
+        value["usb_devices"] = list(usb_devices)
+        value["serial_paths"] = list(serial_paths)
+        value["serial_bsd_clients"] = list(serial_bsd_clients)
+        count = len(value["usb_devices"])
+        value["usb_enumeration"] = {
+            "primary": "ioreg_IOUSBHostDevice",
+            "crosscheck": "system_profiler_SPUSBDataType",
+            "crosscheck_status": "SYSTEM_PROFILER_EMPTY_IOREG_ACTIVE" if count else "BOTH_EMPTY",
+            "ioreg_device_count": count,
+            "system_profiler_device_count": 0,
+        }
+        return value
+
+    def test_unsupported_chipsets_pass_the_downstream_pipeline_without_a_vendor_gate(self):
+        # Proves the vendor allowlist is not what makes these REVIEW_REQUIRED
+        # vs FAIL: with no vendor expectation at all (identity_check_only),
+        # a CH340 and a wholly unknown vendor both reach REVIEW_REQUIRED with
+        # zero violations, exactly like a supported vendor would. The actual
+        # gate is downstream (fingerprint/topology/user confirmation), not
+        # this vendor check.
+        for name, vendor_id, product_id in (
+            ("CH340", "0x1a86", "0x7523"),
+            ("Completely unknown vendor", "0xdead", "0xbeef"),
+        ):
+            with self.subTest(vendor_id=vendor_id):
+                before = _snapshot()
+                after = self._with(serial_paths=["/dev/cu.usbserial-x"],
+                                    usb_devices=[self._device(name, vendor_id, product_id)])
+                _, _, summary = subject.derive_candidate(before, after, None, None)
+                self.assertEqual(summary["status"], "REVIEW_REQUIRED")
+                self.assertEqual(summary["violations"], [])
+
+    def test_unrelated_usb_device_and_unrelated_serial_path_now_fails_ancestry_binding(self):
+        # This was the central finding of the audit, now closed: before the
+        # USB<->serial ancestry check (_bind_candidate_serial_ancestry) was
+        # added, derive_candidate() + _bind_candidate_topology() alone would
+        # accept a USB device with no indication it is a serial adapter,
+        # paired by pure coincidence with an unrelated new serial path, with
+        # zero violations -- because topology binding only checks the USB
+        # device's OWN tree_path is self-consistent, never the serial path's
+        # origin. _bind_candidate_serial_ancestry() requires the candidate
+        # path to resolve to an IOSerialBSDClient whose registry id is among
+        # the candidate device's own serial_client_registry_ids; here the
+        # device has none, so it must now fail closed.
+        before = _snapshot()
+        after = self._with(
+            serial_paths=["/dev/cu.usbserial-coincidental"],
+            usb_devices=[self._device("Totally Unrelated USB Widget", "0x0403", "0x6001")],
+            serial_bsd_clients=[{"registry_entry_id": 5001, "callout_device": "/dev/cu.usbserial-coincidental",
+                                  "dialin_device": "/dev/tty.usbserial-coincidental"}],
+        )
+        _, _, summary = subject.derive_candidate(before, after, "0x0403", "0x6001")
+        self.assertEqual(summary["violations"], [])
+        subject._bind_candidate_topology(summary)
+        self.assertEqual(summary["status"], "REVIEW_REQUIRED")
+        subject._bind_candidate_serial_ancestry(summary, after)
+        self.assertEqual(summary["status"], "FAIL")
+        self.assertFalse(summary["candidate_serial_ancestry_verified"])
+
+    def test_bluetooth_named_serial_path_now_fails_ancestry_binding(self):
+        # Same close: a Bluetooth cu path was previously indistinguishable
+        # from a USB-originated one by derive_candidate()/topology binding
+        # alone (string-prefix filtering only). It has no IOSerialBSDClient
+        # descendant of any USB device at all, so ancestry binding fails it.
+        before = _snapshot()
+        after = self._with(
+            serial_paths=["/dev/cu.Bluetooth-Incoming-Port"],
+            usb_devices=[self._device("Unrelated USB gadget", "0x0403", "0x6001")],
+            serial_bsd_clients=[],
+        )
+        _, _, summary = subject.derive_candidate(before, after, "0x0403", "0x6001")
+        self.assertEqual(summary["status"], "REVIEW_REQUIRED")
+        self.assertEqual(summary["violations"], [])
+        subject._bind_candidate_topology(summary)
+        subject._bind_candidate_serial_ancestry(summary, after)
+        self.assertEqual(summary["status"], "FAIL")
+        self.assertFalse(summary["candidate_serial_ancestry_verified"])
+
+    def test_verified_ancestry_still_passes(self):
+        # Positive control: a candidate whose serial path genuinely resolves
+        # to an IOSerialBSDClient owned by the candidate USB device passes
+        # ancestry binding, exactly like the ordinary cable=True fixture.
+        before = _snapshot()
+        after = self._with(
+            serial_paths=["/dev/cu.usbserial-real"],
+            usb_devices=[self._device("Real FTDI adapter", "0x0403", "0x6001",
+                                       serial_client_registry_ids=[9001])],
+            serial_bsd_clients=[{"registry_entry_id": 9001, "callout_device": "/dev/cu.usbserial-real",
+                                  "dialin_device": "/dev/tty.usbserial-real"}],
+        )
+        _, _, summary = subject.derive_candidate(before, after, "0x0403", "0x6001")
+        subject._bind_candidate_topology(summary)
+        subject._bind_candidate_serial_ancestry(summary, after)
+        self.assertEqual(summary["status"], "REVIEW_REQUIRED")
+        self.assertTrue(summary["candidate_serial_ancestry_verified"])
+
+    def test_ancestry_pointing_at_a_different_device_fails(self):
+        # The IOSerialBSDClient resolves to the right /dev/cu.* string, but
+        # its registry id belongs to a DIFFERENT USB device than the
+        # candidate -- must fail, not pass on path-string match alone.
+        before = _snapshot()
+        after = self._with(
+            serial_paths=["/dev/cu.usbserial-real"],
+            usb_devices=[self._device("Candidate device", "0x0403", "0x6001",
+                                       serial_client_registry_ids=[1111])],
+            serial_bsd_clients=[{"registry_entry_id": 2222, "callout_device": "/dev/cu.usbserial-real",
+                                  "dialin_device": "/dev/tty.usbserial-real"}],
+        )
+        _, _, summary = subject.derive_candidate(before, after, "0x0403", "0x6001")
+        subject._bind_candidate_topology(summary)
+        subject._bind_candidate_serial_ancestry(summary, after)
+        self.assertEqual(summary["status"], "FAIL")
+        self.assertFalse(summary["candidate_serial_ancestry_verified"])
+
+    def test_ambiguous_ancestry_with_duplicate_callout_device_fails(self):
+        # Two IOSerialBSDClient entries claim the exact same callout device
+        # (should not happen, but defensively must not first-match/guess).
+        before = _snapshot()
+        after = self._with(
+            serial_paths=["/dev/cu.usbserial-real"],
+            usb_devices=[self._device("Candidate device", "0x0403", "0x6001",
+                                       serial_client_registry_ids=[1111])],
+            serial_bsd_clients=[
+                {"registry_entry_id": 1111, "callout_device": "/dev/cu.usbserial-real", "dialin_device": None},
+                {"registry_entry_id": 3333, "callout_device": "/dev/cu.usbserial-real", "dialin_device": None},
+            ],
+        )
+        _, _, summary = subject.derive_candidate(before, after, "0x0403", "0x6001")
+        subject._bind_candidate_topology(summary)
+        subject._bind_candidate_serial_ancestry(summary, after)
+        self.assertEqual(summary["status"], "FAIL")
+        self.assertFalse(summary["candidate_serial_ancestry_verified"])
+
+    def test_composite_serial_plus_hid_device_is_blocked_regardless_of_vendor(self):
+        # A real, vendor-independent protection: any new HID device appearing
+        # alongside the serial candidate is an unconditional violation, which
+        # is exactly the shape of a classic BadUSB (serial decoy + HID
+        # keystroke injection) composite device.
+        before = _snapshot()
+        after = self._with(serial_paths=["/dev/cu.a"], usb_devices=[self._device("X", "0x0403", "0x6001")])
+        after["hid_devices"] = [{"fingerprint_sha256": "new-hid"}]
+        _, _, summary = subject.derive_candidate(before, after, "0x0403", "0x6001")
+        self.assertEqual(summary["status"], "FAIL")
+        self.assertIn("unexpected HID devices: 1", summary["violations"])
+
+    def test_two_new_serial_paths_fail_regardless_of_vendor(self):
+        before = _snapshot()
+        after = self._with(serial_paths=["/dev/cu.a", "/dev/cu.b"], usb_devices=[self._device("X", "0x0403", "0x6001")])
+        _, _, summary = subject.derive_candidate(before, after, "0x0403", "0x6001")
+        self.assertEqual(summary["status"], "FAIL")
+
+    def test_two_new_usb_devices_fail_regardless_of_vendor(self):
+        before = _snapshot()
+        after = self._with(serial_paths=["/dev/cu.a"],
+                            usb_devices=[self._device("X", "0x0403", "0x6001"), self._device("Y", "0x0403", "0x6002")])
+        _, _, summary = subject.derive_candidate(before, after, "0x0403", "0x6001")
+        self.assertEqual(summary["status"], "FAIL")
+
+    def test_serial_path_with_no_new_usb_device_fails(self):
+        before = _snapshot()
+        after = self._with(serial_paths=["/dev/cu.a"], usb_devices=[])
+        _, _, summary = subject.derive_candidate(before, after, None, None)
+        self.assertEqual(summary["status"], "FAIL")
+
+    def test_new_usb_device_with_no_new_serial_path_fails(self):
+        before = _snapshot()
+        after = self._with(serial_paths=[], usb_devices=[self._device("X", "0x0403", "0x6001")])
+        _, _, summary = subject.derive_candidate(before, after, "0x0403", "0x6001")
+        self.assertEqual(summary["status"], "FAIL")
+
+    def test_extra_unrelated_usb_device_alongside_a_supported_one_fails(self):
+        before = _snapshot()
+        after = self._with(
+            serial_paths=["/dev/cu.a"],
+            usb_devices=[self._device("X", "0x0403", "0x6001"), self._device("Unrelated", "0x05ac", "0x1234")],
+        )
+        _, _, summary = subject.derive_candidate(before, after, "0x0403", "0x6001")
+        self.assertEqual(summary["status"], "FAIL")
+
+    def test_incomplete_snapshot_is_rejected_before_candidate_derivation(self):
+        import sys as _sys
+        from pathlib import Path as _Path
+        app_dir = str((_Path(__file__).resolve().parents[1] / "app"))
+        if app_dir not in _sys.path:
+            _sys.path.insert(0, app_dir)
+        import connection
+        before = _snapshot()
+        before["snapshot_complete"] = False
+        after = self._with(serial_paths=["/dev/cu.a"], usb_devices=[self._device("X", "0x0403", "0x6001")])
+        with self.assertRaises(connection.SnapshotProblem):
+            connection.inspect(before, after)
 
 
 if __name__ == "__main__":

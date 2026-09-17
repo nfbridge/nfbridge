@@ -494,17 +494,30 @@ def _network_pass(report: Dict[str, Any], label: str) -> None:
 
 
 def _enumeration_view(snapshot: Dict[str, Any]) -> Dict[str, Any]:
+    # serial_client_registry_ids and serial_bsd_clients (schema 0.3+) are
+    # deliberately excluded here: IORegistryEntryID values are assigned per
+    # connection/boot, not a stable device property, so including them would
+    # make a reconnect of the exact same physical device on the exact same
+    # port compare unequal to its original review every time. The USB<->
+    # serial ancestry check they support is a first-use admission concept
+    # (see connection.inspect()/prepare()); a registered reconnect already
+    # re-pins the same fingerprint and the same serial_port string, which
+    # were already ancestry-verified once at registration time.
+    usb_devices = snapshot.get("usb_devices")
+    if isinstance(usb_devices, list):
+        usb_devices = [
+            {k: v for k, v in item.items() if k != "serial_client_registry_ids"}
+            if isinstance(item, dict) else item
+            for item in usb_devices
+        ]
     return {
-        key: snapshot.get(key)
-        for key in (
-            "snapshot_complete",
-            "usb_devices",
-            "hid_devices",
-            "disk_identifiers",
-            "network_interfaces",
-            "system_extension_lines",
-            "serial_paths",
-        )
+        "snapshot_complete": snapshot.get("snapshot_complete"),
+        "usb_devices": usb_devices,
+        "hid_devices": snapshot.get("hid_devices"),
+        "disk_identifiers": snapshot.get("disk_identifiers"),
+        "network_interfaces": snapshot.get("network_interfaces"),
+        "system_extension_lines": snapshot.get("system_extension_lines"),
+        "serial_paths": snapshot.get("serial_paths"),
     }
 
 
@@ -610,6 +623,52 @@ def _bind_candidate_topology(summary: Dict[str, Any]) -> None:
     summary["candidate_topology_observed"] = observed
     summary["observed_candidate_topology"] = topology
     summary["candidate_topology_sha256"] = _canonical_hash(topology) if observed else None
+    summary["violations"] = sorted(set(str(item) for item in violations))
+    if summary["violations"]:
+        summary["status"] = "FAIL"
+    summary.pop("self_sha256_without_this_field", None)
+    summary["self_sha256_without_this_field"] = _canonical_hash(summary)
+
+
+def _bind_candidate_serial_ancestry(summary: Dict[str, Any], after_snapshot: Dict[str, Any]) -> None:
+    """Verify the candidate /dev/cu.* path is an actual IORegistry descendant
+    of the candidate USB device -- not merely inferred because there happens
+    to be exactly one of each. See the USB<->serial ancestry audit handoff
+    and f100_usb_admission.py's _ioreg_serial_client_registry_ids()/
+    _normalize_serial_bsd_clients().
+
+    This is additive to, not a replacement for, _bind_candidate_topology()
+    above and every other existing check: it fails closed (adds a violation,
+    forces status to FAIL) whenever the ancestry evidence is missing,
+    incomplete, ambiguous, or points to a different device, and never
+    upgrades a status on its own.
+    """
+    devices = summary.get("new_usb_devices")
+    cu_paths = [
+        path for path in summary.get("new_serial_paths", [])
+        if isinstance(path, str) and path.startswith("/dev/cu.")
+    ]
+    violations = summary.get("violations")
+    if not isinstance(violations, list):
+        violations = ["candidate violation list is malformed"]
+    verified = False
+    if isinstance(devices, list) and len(devices) == 1 and isinstance(devices[0], dict) and len(cu_paths) == 1:
+        device = devices[0]
+        candidate_path = cu_paths[0]
+        owned_ids = device.get("serial_client_registry_ids")
+        clients = after_snapshot.get("serial_bsd_clients") if isinstance(after_snapshot, dict) else None
+        if isinstance(owned_ids, list) and isinstance(clients, list):
+            matching = [
+                client for client in clients
+                if isinstance(client, dict) and client.get("callout_device") == candidate_path
+            ]
+            if len(matching) == 1 and matching[0].get("registry_entry_id") in owned_ids:
+                verified = True
+    if not verified:
+        violations.append(
+            "candidate serial path is not a verified IORegistry descendant of the candidate USB device"
+        )
+    summary["candidate_serial_ancestry_verified"] = verified
     summary["violations"] = sorted(set(str(item) for item in violations))
     if summary["violations"]:
         summary["status"] = "FAIL"

@@ -51,6 +51,33 @@ class Languages(unittest.TestCase):
                     if any('\uac00' <= c <= '\ud7a3' for c in node.value) and node.value != '한국어':
                         self.assertIn(node.value, EN, (name, node.lineno, node.value))
 
+    def test_usb_first_connect_guidance_orders_macos_allow_before_yes(self):
+        import ast
+        tree = ast.parse((ROOT / 'app' / 'camera.py').read_text())
+        strings = [n.value for n in ast.walk(tree) if isinstance(n, ast.Constant) and isinstance(n.value, str)]
+        ko = next(s for s in strings if s.startswith('케이블/어댑터의 USB 쪽을 Mac에 연결하세요.'))
+        self.assertIn('macOS가 액세서리 연결 허용을 물으면 먼저 허용하세요', ko)
+        self.assertIn('확인한 다음에만', ko)
+        self.assertLess(ko.index('먼저 허용'), ko.index('‘예’를 누르세요'))
+        self.assertIn('카메라 쪽은 아직 연결하지 마세요', ko)
+        en = EN[ko]
+        self.assertIn('allow it first', en)
+        self.assertIn('Only click Yes here after you confirm', en)
+        self.assertLess(en.index('allow it first'), en.index('Only click Yes'))
+        self.assertIn('camera end disconnected', en)
+
+    def test_camera_power_on_guidance_orders_power_on_before_yes(self):
+        import ast
+        tree = ast.parse((ROOT / 'app' / 'camera.py').read_text())
+        strings = [n.value for n in ast.walk(tree) if isinstance(n, ast.Constant) and isinstance(n.value, str)]
+        ko = next(s for s in strings if s.startswith('F100의 전원이 꺼진 상태에서'))
+        self.assertLess(ko.index('전원이 꺼진 상태에서 카메라에 케이블을 연결'), ko.index('F100의 전원을 켜세요'))
+        self.assertLess(ko.index('F100의 전원을 켜세요'), ko.index('켜진 것을 확인한 다음에만'))
+        self.assertIn('‘예’를 누르세요', ko)
+        en = EN[ko]
+        self.assertLess(en.index('powered off, connect the cable'), en.index('Then turn the F100 on'))
+        self.assertLess(en.index('Then turn the F100 on'), en.index('Only click Yes here after you confirm'))
+
     def test_errors_and_dynamic_results_keep_user_data_exact(self):
         with tempfile.TemporaryDirectory() as folder:
             t = Translator(folder)

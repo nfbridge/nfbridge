@@ -73,8 +73,9 @@ GENERIC_ERROR = '작업을 완료하지 못했습니다. 다시 선택해 주세
 
 EN.update({'기록 설정이나 가져오기를 눌러 카메라를 연결하세요.': 'Choose Recording settings or Import to connect your camera.',
  '합성 예제 1롤을 열었습니다. 실제 카메라의 기록은 아닙니다.': 'Opened one synthetic demo roll. These are not records from your camera.',
- '이 안내는 실물 확인된 Prolific F100 데이터 케이블용입니다. 다른 케이블은 별도 검토가 필요합니다.': 'This guide supports the tested Prolific F100 '
-                                                                  'data cable. Other cables need separate review.',
+ '이 안내는 지원되는 USB-serial 어댑터(Prolific PL2303 또는 FTDI 계열)가 연결된 F100 데이터 케이블용입니다. 다른 어댑터는 별도 검토가 필요합니다.': 'This guide supports an F100 data cable using a supported '
+                                                                  'USB-serial adapter (Prolific PL2303 or the FTDI '
+                                                                  'family). Other adapters need separate review.',
  '실제 카메라 연결은 현재 macOS에서만 지원합니다. 예제 보기는 사용할 수 있습니다.': 'Camera connection currently requires macOS. You can still '
                                                      'use the demo.',
  '카메라 연결에 필요한 pyserial이 없습니다. 개발 실행 환경을 확인하세요.': 'pyserial is missing. Check the development environment before '
@@ -99,8 +100,10 @@ EN.update({'기록 설정이나 가져오기를 눌러 카메라를 연결하세
                                                                                              'Leave other USB '
                                                                                              'devices and hubs '
                                                                                              'unchanged. Ready?',
- '케이블의 USB 쪽만 Mac에 연결하세요. 카메라 쪽은 연결하지 마세요. 준비됐나요?': 'Connect only the USB end to your Mac. Leave the camera end '
-                                                    'disconnected. Ready?',
+ '케이블/어댑터의 USB 쪽을 Mac에 연결하세요. macOS가 액세서리 연결 허용을 물으면 먼저 허용하세요. USB 장치 연결이 완료된 것을 확인한 다음에만 이 창에서 ‘예’를 누르세요. 카메라 쪽은 아직 연결하지 마세요.': 'Connect the USB end of the cable/adapter to your Mac. If macOS asks '
+                                                    'to allow the accessory to connect, allow it first. Only click '
+                                                    'Yes here after you confirm the USB device has finished '
+                                                    'connecting. Leave the camera end disconnected for now.',
  '이 장치가 직접 확인한 F100 데이터 케이블이 맞나요? 카메라는 아직 분리된 상태여야 합니다. Wi-Fi는 그대로 사용하며 이 케이블 확인을 다음 연결에도 사용합니다.\n포트: {port}': 'Is '
                                                                                                                'this '
                                                                                                                'the '
@@ -131,22 +134,31 @@ EN.update({'기록 설정이나 가져오기를 눌러 카메라를 연결하세
                                                                                                                'connections.\n'
                                                                                                                'Port: '
                                                                                                                '{port}',
- '카메라가 분리돼 있다면 전원을 끈 상태에서 케이블을 연결한 뒤 전원을 켜세요. Windows VM과 다른 카메라 연결 프로그램은 종료하세요. 준비됐나요?\n포트: {port}': 'If the '
-                                                                                                      'camera is '
-                                                                                                      'disconnected, '
+ 'F100의 전원이 꺼진 상태에서 카메라에 케이블을 연결하세요. 그다음 F100의 전원을 켜세요. F100의 전원이 켜진 것을 확인한 다음에만 이 창에서 ‘예’를 누르세요. Windows VM과 다른 카메라 연결 프로그램은 종료해 두세요.\n포트: {port}': 'With '
+                                                                                                      'the F100 '
+                                                                                                      'powered '
+                                                                                                      'off, '
                                                                                                       'connect '
-                                                                                                      'its cable '
-                                                                                                      'with the '
-                                                                                                      'power off, '
-                                                                                                      'then turn '
-                                                                                                      'it on. '
-                                                                                                      'Close the '
+                                                                                                      'the cable '
+                                                                                                      'to the '
+                                                                                                      'camera. '
+                                                                                                      'Then turn '
+                                                                                                      'the F100 '
+                                                                                                      'on. Only '
+                                                                                                      'click Yes '
+                                                                                                      'here after '
+                                                                                                      'you '
+                                                                                                      'confirm '
+                                                                                                      'the F100 '
+                                                                                                      'is powered '
+                                                                                                      'on. Close '
+                                                                                                      'the '
                                                                                                       'Windows VM '
                                                                                                       'and other '
                                                                                                       'camera '
                                                                                                       'connection '
-                                                                                                      'programs. '
-                                                                                                      'Ready?\n'
+                                                                                                      'programs '
+                                                                                                      'first.\n'
                                                                                                       'Port: '
                                                                                                       '{port}',
  '카메라의 필름 카운터가 E인지 직접 확인하세요. 앱은 이 표시를 읽을 수 없습니다. 지금 E가 표시돼 있나요?': 'Check the film counter on the camera yourself. '

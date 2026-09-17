@@ -18,6 +18,104 @@ class ConnectionProblem(ValueError):
     pass
 
 
+# USB-serial vendor families recognized as candidates for the F100 data-cable
+# role. Membership only decides whether a device is *eligible to enter* the
+# admission flow (before/after USB snapshot diff, fingerprint sealing,
+# topology binding, exactly-one-new-serial-path requirement, explicit user
+# "review-cable" confirmation, fail-closed on any other USB change). It is
+# not itself the security boundary — that pipeline is unchanged and applies
+# identically no matter which family matched, and rejects a candidate that
+# fails any of those checks regardless of vendor. A vendor whose product
+# happens to not be a serial adapter at all is independently screened out
+# there too: with no serial adapter attached, macOS creates no /dev/cu.*
+# node, and inspect() requires exactly one new one.
+#
+# 0x067b (Prolific) covers PL2303 variants; the only one physically tested
+# end to end with an F100 is 067b:2303, but other Prolific product_ids are
+# admitted at the vendor level for the same reason FTDI is (below) — the
+# downstream pipeline, not this pre-gate, is what actually authorizes a
+# specific device.
+#
+# 0x0403 (FTDI, the USB-IF vendor ID assigned to Future Technology Devices
+# International Ltd.) covers many product_ids across chip/board variants
+# (FT232R, FT230X, ...); no specific product_id has been physically observed
+# and recorded in this repository, and guessing one would be worse than not
+# checking it, so the FTDI vendor family is admitted instead of a fabricated
+# product_id. 0x0403:0x6001 (FT232R) has since been physically verified via
+# an FTDI-based Serial-to-USB adapter (see docs/VALIDATION.md), but the
+# family-level match was kept rather than narrowed, for consistency with the
+# Prolific policy above.
+#
+# Do not add other chipsets (e.g. CH340/CH341, CP210x) here without the same
+# kind of physically-verified justification.
+#
+# Independent audit (2026-09-17): does this allowlist provide real security
+# value, or is it redundant given the downstream pipeline? Empirically, an
+# unsupported/unknown vendor reaches REVIEW_REQUIRED with zero violations
+# once past this gate (mac-connection/test_f100_offline_usb_gate.py::
+# VendorAllowlistSecurityAuditTests) — so against a deliberate attacker who
+# can freely set vendor_id/product_id in firmware, this allowlist is not a
+# real boundary. The audit also found a genuine, vendor-independent gap it
+# did not by itself close: the USB<->serial-path binding in derive_candidate()
+# /_bind_candidate_topology() was cardinality-only ("exactly one new USB
+# device" + "exactly one new /dev/cu.* path" implies "same device"), with no
+# IOKit registry evidence tying the specific serial node to the specific USB
+# device subtree. Verdict: HARDEN_THEN_REMOVE.
+#
+# Hardening (2026-09-17, same day): that gap has since been closed by
+# gate._bind_candidate_serial_ancestry(), called from both inspect() and
+# prepare() right after _bind_candidate_topology(). It requires the
+# candidate /dev/cu.* path to resolve to exactly one IOSerialBSDClient
+# registry node (from the new "serial_bsd_clients" snapshot field, collected
+# via `ioreg -a -r -c IOSerialBSDClient`) whose registry_entry_id is present
+# in the candidate USB device's own serial_client_registry_ids — i.e. real
+# IORegistry ancestry, not cardinality alone. This was derived from real
+# comparative evidence collected on this Mac from both a physical Prolific
+# adapter and a physical FTDI adapter (docs/VALIDATION.md), which share an
+# identical class chain (IOUSBHostDevice -> IOUSBHostInterface ->
+# IOUserSerial -> IOSerialBSDClient) despite different driver names
+# (AppleUSBPLCOM vs AppleUSBFTDI) — the check anchors on the common class,
+# never on driver/vendor naming, so it is vendor-independent by
+# construction. It fails closed (status="FAIL") on missing, ambiguous,
+# mismatched, or unparseable ancestry evidence; see
+# VendorAllowlistSecurityAuditTests::test_unrelated_usb_device_and_
+# unrelated_serial_path_now_fails_ancestry_binding,
+# ::test_bluetooth_named_serial_path_now_fails_ancestry_binding,
+# ::test_verified_ancestry_still_passes,
+# ::test_ancestry_pointing_at_a_different_device_fails, and
+# ::test_ambiguous_ancestry_with_duplicate_callout_device_fails.
+#
+# PHASE 3 (2026-09-17, same day): the hardened code path above was re-tested
+# against real physical hardware — both a Prolific adapter (067b:2303) and an
+# FTDI adapter (0403:6001) — through the actual guided admission flow
+# (app/camera.py's enroll()/prepare(), not just offline fixtures).
+# candidate_serial_ancestry_verified was true on every admission for both
+# vendors, and the separate reconnect check (f100_reconnect.py::
+# check_current(), untouched by this hardening) passed 7/7 across repeated
+# disconnect/reconnect cycles for both vendors. See docs/VALIDATION.md for
+# the full evidence. This closes the HARDEN half of the HARDEN_THEN_REMOVE
+# verdict above.
+#
+# REMOVE decision (2026-09-17): deliberately NOT taken. PHASE 4 (re-running
+# the vendor-gate-removed adversarial tests to justify dropping this
+# allowlist) was considered and explicitly deferred, not because it would
+# fail, but because there is no actual user need to accept vendor families
+# beyond the two already in real use here (Prolific, FTDI) — widening
+# eligibility further is out of this project's current scope regardless of
+# what the ancestry hardening alone would technically allow. This allowlist
+# stays as an independent, additive check alongside ancestry binding, not a
+# stand-in for it and not something ancestry binding is meant to replace.
+SUPPORTED_VENDOR_FAMILIES = frozenset({'0x067b', '0x0403'})
+
+
+def is_supported_adapter(vendor_id, product_id):
+    # product_id is accepted (and available at every call site) for forward
+    # compatibility with a future per-product_id restriction, but is not
+    # currently part of the eligibility test — see the policy comment above.
+    del product_id
+    return str(vendor_id).lower() in SUPPORTED_VENDOR_FAMILIES
+
+
 _CHECK_LABELS = {
     'usb_ioreg': ('USB 장치', 'USB devices'),
     'usb_system_profiler': ('USB 보조 조회', 'USB cross-check'),
@@ -104,6 +202,7 @@ def inspect(before, after):
         raise ConnectionProblem('케이블의 통신 포트를 찾지 못했습니다. macOS에서 케이블이 인식됐는지 확인하세요.')
     policy,report,summary=gate.derive_candidate(before,after,device['vendor_id'].lower(),device['product_id'].lower())
     gate._bind_candidate_topology(summary)
+    gate._bind_candidate_serial_ancestry(summary,after)
     if summary['status']!='REVIEW_REQUIRED':
         raise ConnectionProblem('장치 연결 경로를 확인하지 못했습니다.')
     return device,paths[0]
@@ -122,6 +221,7 @@ def prepare(root, session_id, before, after, *, user_confirmed=False, command="l
     session=plan.parent;path=session/'mac-admission'
     policy,report,summary=gate.derive_candidate(before,after,device['vendor_id'].lower(),device['product_id'].lower())
     gate._bind_candidate_topology(summary)
+    gate._bind_candidate_serial_ancestry(summary,after)
     for name,value in [('before.json',before),('after.json',after),('candidate-policy.json',policy),('candidate-report.json',report),('discovery-summary.json',summary)]:
         gate._write_new(path/name,value)
     record=sealed(dict(schema=gate.SESSION_SCHEMA,generated_utc=gate._utc_now(),expected_vid=summary['expected_vid'],expected_pid=summary['expected_pid'],identity_check_only=False,required_candidate_topology='observed_baseline_relative_path',preauth_summary_binding=None,operator_assertions={'camera_powered_off_and_disconnected':True,'stable_baseline_confirmed':True},tool_opens_serial_or_controls_utm=False,safe_to_forward_automatically=False))

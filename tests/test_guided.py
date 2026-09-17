@@ -24,7 +24,60 @@ def snapshots():
     after=json.loads((ROOT/'mac-connection/fixtures/synthetic-after.json').read_text())
     after['usb_devices'][0]['fingerprint_sha256']='a'*64
     after['serial_paths']=['/dev/cu.fixture','/dev/tty.fixture']
+    after['usb_devices'][0]['serial_client_registry_ids']=[101]
+    after['serial_bsd_clients']=[{'registry_entry_id':101,'callout_device':'/dev/cu.fixture','dialin_device':'/dev/tty.fixture'}]
     return before,after
+
+
+class SupportedAdapterTests(unittest.TestCase):
+    def test_prolific_physically_tested_pair_is_supported(self):
+        self.assertTrue(connection.is_supported_adapter('0x067b', '0x2303'))
+
+    def test_prolific_vendor_family_is_supported_regardless_of_product_id(self):
+        # Prolific is allowlisted at the vendor-family level, the same policy
+        # as FTDI: this eligibility check is not the security boundary, and
+        # a candidate with an untested product_id must still pass the full
+        # admission pipeline (fingerprint, serial path, topology, explicit
+        # user confirmation) to actually be used — see
+        # CameraServiceTests.test_prolific_other_product_id_* in
+        # tests/test_camera_service.py for that proof at the app layer.
+        for product_id in ('0x2305', '0x23a3', '0x0000', '0x9999'):
+            with self.subTest(product_id=product_id):
+                self.assertTrue(connection.is_supported_adapter('0x067b', product_id))
+
+    def test_ftdi_vendor_family_is_supported_regardless_of_product_id(self):
+        for product_id in ('0x6001', '0x6015', '0x0000', '0xffff'):
+            with self.subTest(product_id=product_id):
+                self.assertTrue(connection.is_supported_adapter('0x0403', product_id))
+
+    def test_case_insensitive_matching(self):
+        self.assertTrue(connection.is_supported_adapter('0X067B', '0X2303'))
+        self.assertTrue(connection.is_supported_adapter('0X0403', '0X6001'))
+
+    def test_other_chipsets_remain_unsupported(self):
+        for vendor_id, product_id in (('0x1a86', '0x7523'),   # CH340/CH341
+                                       ('0x10c4', '0xea60'),   # CP2102/CP210x
+                                       ('0x0000', '0x0000')):
+            with self.subTest(vendor_id=vendor_id, product_id=product_id):
+                self.assertFalse(connection.is_supported_adapter(vendor_id, product_id))
+
+
+class ConnectionGuidanceOrderTests(unittest.TestCase):
+    def test_cli_usb_first_connect_guidance_orders_macos_allow_before_continuing(self):
+        source = (ROOT / 'app/nfbridge.py').read_text()
+        start = source.index('케이블/어댑터의 USB 쪽을 Mac에 연결하세요.')
+        end = source.index("'", start)
+        text = source[start:end]
+        self.assertLess(text.index('먼저 허용'), text.index('확인한 다음에만'))
+        self.assertIn('카메라 쪽은 아직 연결하지 마세요', text)
+
+    def test_cli_camera_power_on_guidance_orders_power_on_before_continuing(self):
+        source = (ROOT / 'app/nfbridge.py').read_text()
+        start = source.index('F100의 전원이 꺼진 상태에서')
+        end = source.index("'", start)
+        text = source[start:end]
+        self.assertLess(text.index('케이블을 연결하세요'), text.index('F100의 전원을 켜세요'))
+        self.assertLess(text.index('F100의 전원을 켜세요'), text.index('켜진 것을 확인한 다음에만'))
 
 
 class GuidedTests(unittest.TestCase):

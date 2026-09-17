@@ -98,21 +98,21 @@ def live(maintenance=False):
     pause('카메라를 끄고 카메라 쪽 케이블과 USB 쪽을 분리하세요. 허브와 다른 USB 장치는 그대로 두세요.')
     print('연결 전 상태 확인 중…',flush=True)
     before=connection.admission.collect_snapshot()
-    pause('케이블의 USB 쪽만 Mac에 연결하세요. 카메라 쪽은 아직 연결하지 마세요.')
+    pause('케이블/어댑터의 USB 쪽을 Mac에 연결하세요. macOS가 액세서리 연결 허용을 물으면 먼저 허용하세요. USB 장치 연결이 완료된 것을 확인한 다음에만 계속 진행하세요. 카메라 쪽은 아직 연결하지 마세요.')
     print('케이블 확인 중…',flush=True)
     after=connection.admission.collect_snapshot()
     device,port=connection.inspect(before,after)
     print('찾은 케이블: '+device.get('manufacturer','')+' '+device.get('_name',''))
     ids=device['vendor_id'].lower()+':'+device['product_id'].lower()
     print('USB ID: '+ids+' · '+port)
-    if ids!='0x067b:0x2303':
+    if not connection.is_supported_adapter(device['vendor_id'],device['product_id']):
         raise ValueError('이 어댑터는 아직 안내 모드에서 실물 검증하지 않았습니다. 개발용 CLI에서 별도 검증이 필요합니다.')
     scope='백업 후 삭제·Detailed 전환을 준비합니다. 실제 변경은 별도로 확인합니다.' if maintenance else '촬영정보만 읽습니다.'
     if not ask('이 장치가 사용하실 검수된 F100 데이터 케이블이 맞나요? Wi-Fi는 유지합니다. '+scope):
         raise KeyboardInterrupt
     session,port=connection.prepare(OUTPUT/'sessions',stamp(),before,after,user_confirmed=True,command="maintenance" if maintenance else "lq")
     connection.final_check(session,port)
-    pause('카메라 전원이 꺼진 상태에서 10핀 케이블을 연결한 뒤 전원을 켜세요. Windows VM과 다른 카메라 연결 프로그램은 종료해 주세요.')
+    pause('F100의 전원이 꺼진 상태에서 카메라에 10핀 케이블을 연결하세요. 그다음 F100의 전원을 켜세요. F100의 전원이 켜진 것을 확인한 다음에만 계속 진행하세요. Windows VM과 다른 카메라 연결 프로그램은 종료해 주세요.')
     if maintenance:
         command=[sys.executable,str(ROOT/'mac-client/f100_maintenance.py'),'--port',port,'--capture-dir',str(session/'mac-client/capture'),'--integration-session-id',session.name,'--orchestration-plan',str(session/'orchestration-plan.json'),'--admission-report',str(session/'mac-admission/report.json'),'--utm-forwarding-gate',str(session/'mac-admission/utm-forwarding-gate.json'),'--execute-erase-and-detailed']
         subprocess.run(command,check=True)

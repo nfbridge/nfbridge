@@ -19,6 +19,50 @@ from test_transport_regressions import ReplyPort
 import f100_reconnect as reconnect
 
 
+def snapshots_ftdi():
+    """A supported FTDI Serial-to-USB adapter (vendor family 0x0403).
+
+    The product_id used here (0x6001, FT232R) is a real, publicly documented
+    FTDI product_id used only to exercise the vendor-family match in tests.
+    It is not asserted to be the exact product_id of any specific adapter
+    used in physical testing (see docs/VALIDATION.md)."""
+    before, after = snapshots()
+    before, after = copy.deepcopy(before), copy.deepcopy(after)
+    after['usb_devices'][0].update(vendor_id='0x0403', product_id='0x6001',
+                                    _name='Synthetic FTDI fixture', tree_path=['Synthetic FTDI fixture'],
+                                    fingerprint_sha256='b' * 64)
+    return before, after
+
+
+def snapshots_prolific_other_pid():
+    """A Prolific-vendor device with an untested product_id (not 2303).
+
+    067b:2305 is a real, publicly documented Prolific product_id (another
+    PL2303 variant) used only to exercise the vendor-family match. Since
+    only 067b:2303 has been physically tested end to end with an F100, this
+    fixture is used to prove that vendor-family eligibility alone does not
+    grant use — the full admission pipeline (fingerprint, serial path,
+    topology, explicit user confirmation) still gates it exactly like FTDI."""
+    before, after = snapshots()
+    before, after = copy.deepcopy(before), copy.deepcopy(after)
+    after['usb_devices'][0].update(vendor_id='0x067b', product_id='0x2305',
+                                    _name='Synthetic Prolific-other-PID fixture',
+                                    tree_path=['Synthetic Prolific-other-PID fixture'],
+                                    fingerprint_sha256='e' * 64)
+    return before, after
+
+
+def snapshots_unsupported_chipset():
+    """CH340/CH341 (WCH, vendor 0x1a86) — deliberately not in the allowlist."""
+    before, after = snapshots()
+    before, after = copy.deepcopy(before), copy.deepcopy(after)
+    after['usb_devices'][0].update(vendor_id='0x1a86', product_id='0x7523',
+                                    _name='Synthetic unsupported chipset fixture',
+                                    tree_path=['Synthetic unsupported chipset fixture'],
+                                    fingerprint_sha256='c' * 64)
+    return before, after
+
+
 class CameraServiceTests(unittest.TestCase):
     def test_snapshot_failure_reaches_gui_with_failed_check(self):
         app = mock.Mock()
@@ -46,8 +90,8 @@ class CameraServiceTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, expected):
                     service.launch(app, action, mock.Mock(), reading=reading)
 
-    def setup_backend(self, home):
-        before, after = snapshots()
+    def setup_backend(self, home, fixture=snapshots):
+        before, after = fixture()
         calls = []
         def snapshot():
             obj = copy.deepcopy(before if not calls else after)
@@ -157,6 +201,120 @@ class CameraServiceTests(unittest.TestCase):
                 self.invoke(backend,[],deny='disconnect',action='read')
             self.assertEqual(calls,[])
             self.assertFalse(backend.registration.exists())
+
+    def test_ftdi_adapter_completes_enrollment_like_prolific(self):
+        with tempfile.TemporaryDirectory() as d:
+            backend, calls = self.setup_backend(d, fixture=snapshots_ftdi)
+            result, ser, seen = self.invoke(backend, state(0x12, DATA), action='read')
+            self.assertEqual([x[0] for x in seen], ['disconnect', 'usb-only', 'review-cable', 'connect-camera'])
+            self.assertEqual(result['data']['roll_count'], 1)
+            self.assertTrue(backend.registration.exists())
+
+    def test_unsupported_chipset_is_rejected_before_admission_session_created(self):
+        with tempfile.TemporaryDirectory() as d:
+            backend, calls = self.setup_backend(d, fixture=snapshots_unsupported_chipset)
+            with self.assertRaisesRegex(ValueError, '지원되는 USB-serial 어댑터'):
+                self.invoke(backend, [], action='read')
+            self.assertFalse(backend.registration.exists())
+            self.assertEqual(list(Path(d).glob('sessions/*')), [])
+
+    def test_ftdi_without_review_cable_confirmation_is_cancelled(self):
+        with tempfile.TemporaryDirectory() as d:
+            backend, calls = self.setup_backend(d, fixture=snapshots_ftdi)
+            with self.assertRaises(camera.Cancelled):
+                self.invoke(backend, [], deny='review-cable', action='read')
+            self.assertFalse(backend.registration.exists())
+            self.assertEqual(list(Path(d).glob('sessions/*')), [])
+
+    def test_ftdi_with_ambiguous_serial_paths_fails_before_port_open(self):
+        with tempfile.TemporaryDirectory() as d:
+            before, after = snapshots_ftdi()
+            after['serial_paths'] = ['/dev/cu.fixture', '/dev/cu.fixture-2']
+            backend, calls = self.setup_backend(d, fixture=lambda: (before, after))
+            fake = mock.Mock()
+            with mock.patch.object(camera.ro, 'serial', fake):
+                with self.assertRaisesRegex(connection.ConnectionProblem, '케이블 이외의 장치 변화'):
+                    backend.read(lambda *_: True)
+                fake.Serial.assert_not_called()
+            self.assertFalse(backend.registration.exists())
+
+    def test_ftdi_with_unrelated_usb_device_also_changing_fails(self):
+        with tempfile.TemporaryDirectory() as d:
+            before, after = snapshots_ftdi()
+            after['usb_devices'] = after['usb_devices'] + [{
+                '_name': 'Unrelated synthetic device', 'vendor_id': '0x05ac', 'product_id': '0x1234',
+                'tree_path': ['Unrelated synthetic device'], 'fingerprint_sha256': 'd' * 64,
+            }]
+            backend, calls = self.setup_backend(d, fixture=lambda: (before, after))
+            fake = mock.Mock()
+            with mock.patch.object(camera.ro, 'serial', fake):
+                with self.assertRaises(connection.ConnectionProblem):
+                    backend.read(lambda *_: True)
+                fake.Serial.assert_not_called()
+            self.assertFalse(backend.registration.exists())
+
+    def test_prolific_other_product_id_completes_enrollment_like_exact_pair(self):
+        # Proves vendor-family eligibility for Prolific behaves like FTDI:
+        # a PID other than the one physically tested (2303) is still
+        # eligible to enter admission and, when the rest of the evidence is
+        # clean, completes the same as the exact pair.
+        with tempfile.TemporaryDirectory() as d:
+            backend, calls = self.setup_backend(d, fixture=snapshots_prolific_other_pid)
+            result, ser, seen = self.invoke(backend, state(0x12, DATA), action='read')
+            self.assertEqual([x[0] for x in seen], ['disconnect', 'usb-only', 'review-cable', 'connect-camera'])
+            self.assertEqual(result['data']['roll_count'], 1)
+            self.assertTrue(backend.registration.exists())
+
+    def test_prolific_other_product_id_without_review_cable_confirmation_is_cancelled(self):
+        with tempfile.TemporaryDirectory() as d:
+            backend, calls = self.setup_backend(d, fixture=snapshots_prolific_other_pid)
+            with self.assertRaises(camera.Cancelled):
+                self.invoke(backend, [], deny='review-cable', action='read')
+            self.assertFalse(backend.registration.exists())
+            self.assertEqual(list(Path(d).glob('sessions/*')), [])
+
+    def test_prolific_other_product_id_with_ambiguous_serial_paths_fails_before_port_open(self):
+        with tempfile.TemporaryDirectory() as d:
+            before, after = snapshots_prolific_other_pid()
+            after['serial_paths'] = ['/dev/cu.fixture', '/dev/cu.fixture-2']
+            backend, calls = self.setup_backend(d, fixture=lambda: (before, after))
+            fake = mock.Mock()
+            with mock.patch.object(camera.ro, 'serial', fake):
+                with self.assertRaisesRegex(connection.ConnectionProblem, '케이블 이외의 장치 변화'):
+                    backend.read(lambda *_: True)
+                fake.Serial.assert_not_called()
+            self.assertFalse(backend.registration.exists())
+
+    def test_prolific_other_product_id_with_unrelated_usb_device_also_changing_fails(self):
+        with tempfile.TemporaryDirectory() as d:
+            before, after = snapshots_prolific_other_pid()
+            after['usb_devices'] = after['usb_devices'] + [{
+                '_name': 'Unrelated synthetic device', 'vendor_id': '0x05ac', 'product_id': '0x1234',
+                'tree_path': ['Unrelated synthetic device'], 'fingerprint_sha256': 'f' * 64,
+            }]
+            backend, calls = self.setup_backend(d, fixture=lambda: (before, after))
+            fake = mock.Mock()
+            with mock.patch.object(camera.ro, 'serial', fake):
+                with self.assertRaises(connection.ConnectionProblem):
+                    backend.read(lambda *_: True)
+                fake.Serial.assert_not_called()
+            self.assertFalse(backend.registration.exists())
+
+    def test_prolific_other_product_id_reconnect_with_changed_topology_fails_before_port_open(self):
+        # A device that passed admission once must still fail on reconnect
+        # if the topology it is bound to changes, regardless of vendor.
+        with tempfile.TemporaryDirectory() as d:
+            backend, _ = self.setup_backend(d, fixture=snapshots_prolific_other_pid)
+            self.invoke(backend, state(2, b'\0'), action='read')
+            original = backend.snapshot
+            def changed():
+                snap = original(); snap['disk_identifiers'].append('disk99'); return snap
+            backend.snapshot = changed
+            fake = mock.Mock()
+            with mock.patch.object(camera.ro, 'serial', fake):
+                with self.assertRaisesRegex(ValueError, 'topology changed'):
+                    backend.read(lambda *_: True)
+                fake.Serial.assert_not_called()
 
     def test_changed_reconnect_topology_fails_before_port_open(self):
         with tempfile.TemporaryDirectory() as d:
