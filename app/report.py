@@ -21,8 +21,8 @@ def rows(data, language="ko"):
                        aperture=frame.get('aperture','—'), focal=frame.get('focal_length','—'),
                        mode=frame.get('exposure_mode','—'), meter=({'matrix':'Matrix','spot':'Spot','center_weighted':'Center-weighted'} if language=='en' else {'matrix':'멀티','spot':'스팟','center_weighted':'중앙중점'}).get(frame.get('meter_mode'),frame.get('meter_mode','—')),
                        comp=frame.get('exposure_comp','—'), flash_comp=frame.get('flash_comp','—'),
-                       flash=({'off':'Off','ttl':'TTL'} if language=='en' else {'off':'없음','ttl':'TTL'}).get(frame.get('flash_type'),frame.get('flash_type','—')),
-                       sync=({'normal':'Normal (front curtain)','rear':'Rear curtain'} if language=='en' else {'normal':'일반(선막)','rear':'후막'}).get(frame.get('flash_sync'),frame.get('flash_sync','—')),
+                       flash=({'off':'Off','non_ttl':'Non-TTL','ttl':'TTL'} if language=='en' else {'off':'없음','non_ttl':'Non-TTL','ttl':'TTL'}).get(frame.get('flash_type'),frame.get('flash_type','—')),
+                       sync=({'normal':'Normal (front curtain)','slow':'Slow sync','rear':'Rear curtain','red_eye':'Red-eye reduction','red_eye_slow':'Red-eye reduction + slow sync'} if language=='en' else {'normal':'일반(선막)','slow':'슬로우 동조','rear':'후막','red_eye':'적목감소','red_eye_slow':'적목감소+슬로우'}).get(frame.get('flash_sync'),frame.get('flash_sync','—')),
                        multiple=('Yes' if frame.get('multiple_exposure') else 'No') if language=='en' else ('예' if frame.get('multiple_exposure') else '아니오'))
 
 

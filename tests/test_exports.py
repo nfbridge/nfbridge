@@ -51,6 +51,26 @@ class ExportTests(unittest.TestCase):
         text=exports.markdown(roll,'simple',meta,WHEN)
         self.assertIn('TTL · 다중노출',text);self.assertIn('| - | - | - |',text)
         self.assertIn('lenses: []',text)
+    def test_flash_display_covers_non_ttl_and_all_real_sync_labels(self):
+        # 2026-09-19 closure: flash_type gained non_ttl, flash_sync gained
+        # slow/red_eye/red_eye_slow. exports.flash() must render all of
+        # them, in both languages, not just the pre-closure off/ttl/rear.
+        self.assertEqual(exports.flash({'flash_type':'non_ttl'},'ko'),'Non-TTL')
+        self.assertEqual(exports.flash({'flash_type':'non_ttl'},'en'),'Non-TTL')
+        self.assertIn('Slow',exports.flash({'flash_type':'ttl','flash_sync':'slow'},'en'))
+        self.assertIn('슬로우',exports.flash({'flash_type':'ttl','flash_sync':'slow'},'ko'))
+        self.assertIn('Red-eye',exports.flash({'flash_type':'non_ttl','flash_sync':'red_eye'},'en'))
+        self.assertIn('적목',exports.flash({'flash_type':'non_ttl','flash_sync':'red_eye'},'ko'))
+        self.assertIn('Red-eye',exports.flash({'flash_type':'ttl','flash_sync':'red_eye_slow'},'en'))
+        self.assertIn('Rear',exports.flash({'flash_type':'ttl','flash_sync':'rear'},'en'))
+    def test_report_rows_render_non_ttl_and_sync_labels(self):
+        data={'rolls':[{'roll_number':47,'film_speed':'400','frames':[
+            {'frame_number':1,'flash_type':'non_ttl','flash_sync':'red_eye'},
+            {'frame_number':2,'flash_type':'ttl','flash_sync':'slow'},
+        ]}]}
+        rows=list(report.rows(data,language='en'))
+        self.assertEqual(rows[0]['flash'],'Non-TTL');self.assertEqual(rows[0]['sync'],'Red-eye reduction')
+        self.assertEqual(rows[1]['flash'],'TTL');self.assertEqual(rows[1]['sync'],'Slow sync')
     def test_exif_dates_and_unknowns_not_invented(self):
         data=nfbridge.demo_data();roll=data['rolls'][0]
         row=dict(zip(exports.EXIF_COLUMNS,exports.exif_row(roll,roll['frames'][2],{'date':'2026-09-13'})))

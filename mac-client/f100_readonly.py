@@ -968,7 +968,13 @@ def decode_lq(
                 "focal_length_raw": f"0x{rec[3]:02x}",
                 "focal_length": lookup("focal_length", rec[3]),
                 "flash_flags_raw": f"0x{rec[4]:02x}",
-                "flash_type": {0: "off", 3: "ttl"}.get(rec[4] & 0xEF, f"unknown(0x{rec[4] & 0xEF:02x})"),
+                # Flash type is bits 1:0 only; bit 4 (multiple_exposure) and
+                # other bits are independent/reserved and never affect this
+                # label. Real-hardware evidence (Roll 47/48, 2026-09-19):
+                # 0=off, 1=non_ttl, 3=ttl observed; 2 is reserved/unobserved.
+                "flash_type": {0: "off", 1: "non_ttl", 3: "ttl"}.get(
+                    rec[4] & 0b11, f"unknown(0x{rec[4] & 0b11:02x})"
+                ),
                 "multiple_exposure": bool(rec[4] & 0b10000),
             }
             if detailed:
@@ -994,12 +1000,18 @@ def decode_lq(
                             rec[12] & 0b11
                         ],
                         "exposure_mode": ["P", "S", "A", "M"][(rec[12] >> 2) & 0b11],
-                        # Both PSH and MDB establish 0=Normal, 2=Rear.
-                        # Other enum names from the old static note were not
-                        # validated; preserve their numeric code explicitly.
-                        "flash_sync": {0: "normal", 2: "rear"}.get(
-                            sync_bits, f"unknown(0x{sync_bits:02x})"
-                        ),
+                        # Real-hardware evidence (Roll 47/48, 2026-09-19):
+                        # 0=normal, 1=slow, 2=rear, 3=red_eye, 4=red_eye_slow
+                        # observed. 5/6/7 remain unobserved with normal
+                        # user operation and are left semantic unknown, not
+                        # guessed. rec[12] bit 7 is not part of this field.
+                        "flash_sync": {
+                            0: "normal",
+                            1: "slow",
+                            2: "rear",
+                            3: "red_eye",
+                            4: "red_eye_slow",
+                        }.get(sync_bits, f"unknown(0x{sync_bits:02x})"),
                     }
                 )
             frames.append(frame)

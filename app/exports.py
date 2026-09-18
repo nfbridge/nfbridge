@@ -42,8 +42,14 @@ def lens(frame):
 
 def flash(frame, language='ko'):
     name=frame.get('flash_type')
-    text={'off':'Off' if language=='en' else '없음','ttl':'TTL'}.get(name,name or '-')
-    if frame.get('flash_sync')=='rear':text+=' Rear curtain' if language=='en' else ' 후막'
+    text={'off':'Off' if language=='en' else '없음','non_ttl':'Non-TTL','ttl':'TTL'}.get(name,name or '-')
+    sync_suffix={
+        'slow':(' Slow sync' if language=='en' else ' 슬로우 동조'),
+        'rear':(' Rear curtain' if language=='en' else ' 후막'),
+        'red_eye':(' Red-eye reduction' if language=='en' else ' 적목감소'),
+        'red_eye_slow':(' Red-eye reduction + slow sync' if language=='en' else ' 적목감소+슬로우'),
+    }.get(frame.get('flash_sync'))
+    if sync_suffix:text+=sync_suffix
     comp=frame.get('flash_comp')
     if comp and comp not in ('0','0.0','+0.0'):text+=' '+str(comp)+' EV'
     if frame.get('multiple_exposure'):text+=' · Multiple exposure' if language=='en' else ' · 다중노출'

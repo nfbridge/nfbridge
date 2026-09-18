@@ -48,7 +48,7 @@
             "aperture_raw": "0x09",
             "focal_length_raw": "0x33",
             "flash_flags_raw": "0x11",
-            "flash_type": "unknown(0x01)",
+            "flash_type": "non_ttl",
             "multiple_exposure": true,
             "lens_shortest_focal_raw": "0x20",
             "lens_longest_focal_raw": "0x55",

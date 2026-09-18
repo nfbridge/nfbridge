@@ -92,11 +92,20 @@ class TestAuditFollowup(unittest.TestCase):
                 link.request('LQ',max_response_length=512,live_capability=m._EXPERIMENTAL_LQ_LIVE_CAPABILITY)
         self.assertEqual(len(port.writes),2)
 
-    def test_unknown_flash_bits_not_collapsed_to_ttl(self):
-        for code in [0x07,0x0b,0x23,0x83]:
+    def test_flash_type_is_bits_1_0_only_and_ignores_other_bits(self):
+        # Real-hardware evidence (Roll 47/48, 2026-09-19) confirmed flash
+        # type is exactly rec[4] & 0x03; stray/reserved higher bits (e.g.
+        # multiple_exposure's own bit 4) must not turn a valid low-bits
+        # code into "unknown", and must not change its label either.
+        for code, expected in [(0x07,'ttl'),(0x0b,'ttl'),(0x23,'ttl'),(0x83,'ttl'),(0x21,'non_ttl'),(0xa0,'off')]:
             record=bytes([1,0x42,0x30,0x50,code,0,0,0,0,0,0,0,0])
             decoded=m.decode_lq(b'\x01\xf3\x00\x01'+record+b'\x01\xfd',table_policy='raw')
-            self.assertEqual(decoded['rolls'][0]['frames'][0]['flash_type'],f'unknown(0x{code:02x})')
+            self.assertEqual(decoded['rolls'][0]['frames'][0]['flash_type'],expected)
+
+    def test_flash_type_reserved_code_2_stays_unknown(self):
+        record=bytes([1,0x42,0x30,0x50,0x02,0,0,0,0,0,0,0,0])
+        decoded=m.decode_lq(b'\x01\xf3\x00\x01'+record+b'\x01\xfd',table_policy='raw')
+        self.assertEqual(decoded['rolls'][0]['frames'][0]['flash_type'],'unknown(0x02)')
 
     def test_cli_lq_default_is_protocol_limit(self):
         import argparse
